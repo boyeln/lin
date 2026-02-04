@@ -117,6 +117,16 @@ lin label get <label-id>
 # List issues filtered by label
 lin issue list --label <label-id>
 
+# List issues with date range filters
+lin issue list --created-after 2024-01-01
+lin issue list --created-before 2024-12-31
+lin issue list --updated-after 2024-06-01
+lin issue list --updated-before 2024-06-30
+
+# Combine date filters with other filters
+lin issue list --team ENG --created-after 2024-01-01 --created-before 2024-06-30
+lin issue list --assignee me --updated-after 2024-01-01
+
 # Create an issue with labels
 lin issue create --team <team-id> --title "New feature" --labels <label-id1> --labels <label-id2>
 
@@ -219,7 +229,7 @@ lin issue remove-relation <relation-id>
 | **Issue Relations** | | |
 | Issue relations | ✅ | Parent/child, blocks/blocked by, relates to, duplicate |
 | **Advanced Filtering** | | |
-| Date range filters | ❌ | Filter by created/updated date ranges |
+| Date range filters | ✅ | Filter by created/updated date ranges |
 | Sort options | ❌ | Sort by priority, updated date, created date |
 | Combined filters | ❌ | Complex filter combinations |
 | **CLI Experience** | | |
