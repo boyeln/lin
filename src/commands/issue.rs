@@ -145,9 +145,7 @@ pub fn parse_identifier(s: &str) -> Result<(String, i32)> {
         || team_key.starts_with('-')
         || team_key.ends_with('-')
         || team_key.contains("--")
-        || !team_key
-            .chars()
-            .all(|c| c.is_ascii_uppercase() || c == '-')
+        || !team_key.chars().all(|c| c.is_ascii_uppercase() || c == '-')
     {
         return Err(LinError::parse(format!(
             "Invalid team key '{}': expected uppercase letters (e.g., ENG, ABC-DEF)",
@@ -372,8 +370,7 @@ pub fn create_issue(client: &GraphQLClient, options: IssueCreateOptions) -> Resu
         "input": input
     });
 
-    let response: IssueCreateResponse =
-        client.query(queries::ISSUE_CREATE_MUTATION, variables)?;
+    let response: IssueCreateResponse = client.query(queries::ISSUE_CREATE_MUTATION, variables)?;
 
     if !response.issue_create.success {
         return Err(LinError::api("Failed to create issue"));
@@ -384,7 +381,9 @@ pub fn create_issue(client: &GraphQLClient, options: IssueCreateOptions) -> Resu
             output_success(&issue);
             Ok(())
         }
-        None => Err(LinError::api("Issue creation succeeded but no issue returned")),
+        None => Err(LinError::api(
+            "Issue creation succeeded but no issue returned",
+        )),
     }
 }
 
@@ -473,8 +472,7 @@ pub fn update_issue(
         "input": input
     });
 
-    let response: IssueUpdateResponse =
-        client.query(queries::ISSUE_UPDATE_MUTATION, variables)?;
+    let response: IssueUpdateResponse = client.query(queries::ISSUE_UPDATE_MUTATION, variables)?;
 
     if !response.issue_update.success {
         return Err(LinError::api("Failed to update issue"));
@@ -485,7 +483,9 @@ pub fn update_issue(
             output_success(&issue);
             Ok(())
         }
-        None => Err(LinError::api("Issue update succeeded but no issue returned")),
+        None => Err(LinError::api(
+            "Issue update succeeded but no issue returned",
+        )),
     }
 }
 
