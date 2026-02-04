@@ -2,12 +2,13 @@
 //!
 //! Entry point for the CLI application.
 
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
+use clap_complete::Shell;
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
 use lin::commands::{
-    attachment, comment, cycle, document, git, issue, label, org, project, relation, search, team,
-    user, workflow,
+    attachment, comment, completions, cycle, document, git, issue, label, org, project, relation,
+    search, team, user, workflow,
 };
 use lin::config::Config;
 use lin::output::{init_colors, output_error_with_format, output_success, OutputFormat};
@@ -118,6 +119,16 @@ enum Commands {
         /// Maximum number of results to return
         #[arg(long, default_value = "50")]
         limit: u32,
+    },
+    /// Generate shell completion scripts
+    #[command(after_help = "EXAMPLES:\n  \
+    lin completions bash > ~/.local/share/bash-completion/completions/lin\n  \
+    lin completions zsh > ~/.zfunc/_lin\n  \
+    lin completions fish > ~/.config/fish/completions/lin.fish")]
+    Completions {
+        /// The shell to generate completions for
+        #[arg(value_enum)]
+        shell: Shell,
     },
 }
 
@@ -578,6 +589,12 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
     match &cli.command {
         // Org commands don't all require an API token
         Commands::Org { command } => handle_org_command(command, &cli, format),
+        // Completions command doesn't require an API token
+        Commands::Completions { shell } => {
+            let mut cmd = Cli::command();
+            completions::generate_completions(*shell, &mut cmd);
+            Ok(())
+        }
         // All other commands require an API token
         _ => {
             let config = Config::load()?;
@@ -603,7 +620,7 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
                     state,
                     limit,
                 } => handle_search_command(&token, &query, team, assignee, state, limit, format),
-                Commands::Org { .. } => unreachable!(),
+                Commands::Org { .. } | Commands::Completions { .. } => unreachable!(),
             }
         }
     }

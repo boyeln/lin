@@ -5,6 +5,7 @@
 
 pub mod attachment;
 pub mod comment;
+pub mod completions;
 pub mod cycle;
 pub mod document;
 pub mod git;

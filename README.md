@@ -212,6 +212,68 @@ lin issue add-relation ENG-123 ENG-456 --type duplicate
 
 # Remove a relation
 lin issue remove-relation <relation-id>
+
+# Generate shell completions
+lin completions bash > ~/.local/share/bash-completion/completions/lin
+lin completions zsh > ~/.zfunc/_lin
+lin completions fish > ~/.config/fish/completions/lin.fish
+lin completions powershell > _lin.ps1
+lin completions elvish > lin.elv
+```
+
+## Shell Completions
+
+lin supports generating shell completion scripts for bash, zsh, fish, PowerShell, and elvish.
+
+### Bash
+
+```bash
+# Generate completions and save to bash-completion directory
+lin completions bash > ~/.local/share/bash-completion/completions/lin
+
+# Or source directly in your .bashrc
+echo 'eval "$(lin completions bash)"' >> ~/.bashrc
+```
+
+### Zsh
+
+```bash
+# Create the completions directory if needed
+mkdir -p ~/.zfunc
+
+# Generate completions
+lin completions zsh > ~/.zfunc/_lin
+
+# Add to your .zshrc (before compinit):
+# fpath+=~/.zfunc
+# autoload -Uz compinit && compinit
+```
+
+### Fish
+
+```bash
+# Generate completions to fish completions directory
+lin completions fish > ~/.config/fish/completions/lin.fish
+```
+
+### PowerShell
+
+```powershell
+# Generate completions
+lin completions powershell > _lin.ps1
+
+# Add to your PowerShell profile
+. _lin.ps1
+```
+
+### Elvish
+
+```bash
+# Generate completions
+lin completions elvish > ~/.elvish/lib/lin.elv
+
+# Add to your rc.elv:
+# use lin
 ```
 
 ## Features
@@ -255,7 +317,7 @@ lin issue remove-relation <relation-id>
 | Combined filters | ✅ | Combine multiple filters with AND logic |
 | Priority filter | ✅ | Filter by priority level (urgent, high, normal, low, none) |
 | **CLI Experience** | | |
-| Shell completions | ❌ | Bash, zsh, fish completions |
+| Shell completions | ✅ | Bash, zsh, fish, PowerShell, elvish completions |
 | Interactive TUI | ❌ | Interactive terminal UI for browsing |
 | Caching | ❌ | Cache responses for faster repeated queries |
 | Config validation | ❌ | Validate configuration file |
