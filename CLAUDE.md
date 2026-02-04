@@ -46,4 +46,8 @@ cargo clippy && cargo fmt --check # Lint before commit
 ## Git
 
 - Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `test:`, `refactor:`
-- Every commit must pass: `cargo check && cargo test && cargo fmt --check && cargo clippy`
+- **Before every commit**, always run:
+  ```bash
+  cargo test && cargo fmt --check && cargo clippy
+  ```
+- Do not commit if any of these checks fail
