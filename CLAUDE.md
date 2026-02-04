@@ -175,3 +175,51 @@ Location: `~/.config/lin/config.json`
 3. Create command function in `src/commands/`
 4. Wire up in `src/main.rs`
 5. Add tests with mockito
+
+## Git Workflow
+
+### Commit Conventions
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/). Format:
+
+```
+<type>: <description>
+
+[optional body]
+```
+
+Common types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`, `ci`
+
+Examples:
+- `feat: add issue search command`
+- `fix: handle empty team list response`
+- `docs: update API authentication examples`
+- `test: add unit tests for config parsing`
+
+### Atomic Commits
+
+Each commit should be a single, focused logical change. This keeps the history bisectable and makes code review easier.
+
+**Every commit must pass:**
+- `cargo check`
+- `cargo test` (unit tests)
+- `cargo fmt --check`
+- `cargo clippy`
+
+Integration tests are excluded as they require API credentials and run only in CI.
+
+### Fixing Mistakes on Feature Branches
+
+When fixing errors in commits that haven't been merged to main yet, prefer rewriting history over adding fix-up commits:
+
+```bash
+# Amend the most recent commit
+git add .
+git commit --amend
+
+# For older commits, use interactive rebase
+git rebase -i main
+# Mark the erroneous commit as 'edit' or use 'fixup' to squash fixes
+```
+
+This keeps the branch history clean before merging. Only rewrite history on branches that haven't been shared/merged.
