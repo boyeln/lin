@@ -138,6 +138,15 @@ lin document create --title "My Document" --content "# Hello\n\nWorld"
 # Create a document associated with a project
 lin document create --title "Project Doc" --content "Content" --project <project-id>
 
+# List attachments on an issue
+lin attachment list --issue ENG-123
+
+# Upload a file as an attachment to an issue
+lin attachment upload --issue ENG-123 /path/to/file.png
+
+# Get details of a specific attachment (includes download URL)
+lin attachment get <attachment-id>
+
 # Manage organizations
 lin org list
 lin org add <name>
@@ -168,13 +177,13 @@ lin org set-default <name>
 | Token from file | ✅ | Read token from config file |
 | Delete issues | ✅ | Delete an issue by ID or identifier |
 | Archive/unarchive | ✅ | Archive or unarchive issues |
-| Comments | ❌ | Add/list comments on issues |
+| Comments | ✅ | Add/list comments on issues |
 | Projects | ✅ | List projects, get project details, filter issues by project |
 | Cycles/Sprints | ✅ | List cycles, get cycle details with issues, filter issues by cycle |
 | Labels | ✅ | List labels, get label details, filter issues by label, add labels to issues |
 | Workflow states | ✅ | List workflow states for a team |
 | Documents | ✅ | List, get, and create documents |
-| File uploads | ❌ | Upload attachments |
+| File uploads | ✅ | Upload attachments to issues, list and get attachment details |
 | Templates | ❌ | Bulk create issues from templates |
 | Git integration | ❌ | Link issues to branches |
 | Search | ❌ | Full-text search for issues |

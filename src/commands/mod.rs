@@ -3,6 +3,7 @@
 //! This module contains the actual implementation of CLI commands,
 //! separated from the argument parsing in main.rs.
 
+pub mod attachment;
 pub mod comment;
 pub mod cycle;
 pub mod document;

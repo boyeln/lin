@@ -5,7 +5,9 @@
 use clap::{Parser, Subcommand};
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
-use lin::commands::{comment, cycle, document, issue, label, org, project, team, user, workflow};
+use lin::commands::{
+    attachment, comment, cycle, document, issue, label, org, project, team, user, workflow,
+};
 use lin::config::Config;
 use lin::output::{init_colors, output_error_with_format, output_success, OutputFormat};
 use serde::Serialize;
@@ -49,6 +51,11 @@ enum Commands {
     Comment {
         #[command(subcommand)]
         command: CommentCommands,
+    },
+    /// Manage attachments on issues
+    Attachment {
+        #[command(subcommand)]
+        command: AttachmentCommands,
     },
     /// Manage teams
     Team {
@@ -232,6 +239,36 @@ enum CommentCommands {
         /// The comment body/content
         #[arg(long)]
         body: String,
+    },
+}
+
+/// Attachment-related subcommands.
+#[derive(Subcommand, Debug)]
+enum AttachmentCommands {
+    /// List attachments on an issue
+    #[command(after_help = "EXAMPLES:\n  \
+    lin attachment list --issue ENG-123")]
+    List {
+        /// Issue identifier (e.g., "ENG-123") or UUID
+        #[arg(long)]
+        issue: String,
+    },
+    /// Upload a file as an attachment to an issue
+    #[command(after_help = "EXAMPLES:\n  \
+    lin attachment upload --issue ENG-123 /path/to/file.png")]
+    Upload {
+        /// Issue identifier (e.g., "ENG-123") or UUID
+        #[arg(long)]
+        issue: String,
+        /// Path to the file to upload
+        file_path: String,
+    },
+    /// Get details of a specific attachment (including download URL)
+    #[command(after_help = "EXAMPLES:\n  \
+    lin attachment get <attachment-id>")]
+    Get {
+        /// Attachment ID
+        id: String,
     },
 }
 
@@ -442,6 +479,9 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
             match cli.command {
                 Commands::Issue { command } => handle_issue_command(command, &token, format),
                 Commands::Comment { command } => handle_comment_command(command, &token, format),
+                Commands::Attachment { command } => {
+                    handle_attachment_command(command, &token, format)
+                }
                 Commands::Team { command } => handle_team_command(command, &token, format),
                 Commands::User { command } => handle_user_command(command, &token, format),
                 Commands::Workflow { command } => handle_workflow_command(command, &token, format),
@@ -555,6 +595,22 @@ fn handle_comment_command(
         CommentCommands::Add { issue, body } => {
             comment::create_comment(&client, &issue, &body, format)
         }
+    }
+}
+
+fn handle_attachment_command(
+    command: AttachmentCommands,
+    token: &str,
+    format: OutputFormat,
+) -> lin::Result<()> {
+    let client = GraphQLClient::new(token);
+
+    match command {
+        AttachmentCommands::List { issue } => attachment::list_attachments(&client, &issue, format),
+        AttachmentCommands::Upload { issue, file_path } => {
+            attachment::upload_attachment(&client, &issue, &file_path, format)
+        }
+        AttachmentCommands::Get { id } => attachment::get_attachment(&client, &id, format),
     }
 }
 
