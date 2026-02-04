@@ -17,11 +17,15 @@
 //! - [`config`] - Configuration management
 //! - [`auth`] - Authentication and token resolution
 //! - [`commands`] - Command implementations
+//! - [`api`] - GraphQL client and queries for Linear API
+//! - [`models`] - Domain models for Linear entities
 
+pub mod api;
 pub mod auth;
 pub mod commands;
 pub mod config;
 pub mod error;
+pub mod models;
 pub mod output;
 
 // Re-export commonly used types
