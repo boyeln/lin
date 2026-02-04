@@ -123,6 +123,21 @@ lin issue create --team <team-id> --title "New feature" --labels <label-id1> --l
 # Update an issue's labels
 lin issue update ENG-123 --labels <label-id1> --labels <label-id2>
 
+# List all documents
+lin document list
+
+# List documents for a specific project
+lin document list --project <project-id>
+
+# Get details of a specific document (includes content)
+lin document get <document-id>
+
+# Create a new document
+lin document create --title "My Document" --content "# Hello\n\nWorld"
+
+# Create a document associated with a project
+lin document create --title "Project Doc" --content "Content" --project <project-id>
+
 # Manage organizations
 lin org list
 lin org add <name>
@@ -158,7 +173,7 @@ lin org set-default <name>
 | Cycles/Sprints | ✅ | List cycles, get cycle details with issues, filter issues by cycle |
 | Labels | ✅ | List labels, get label details, filter issues by label, add labels to issues |
 | Workflow states | ✅ | List workflow states for a team |
-| Documents | ❌ | Create/manage documents |
+| Documents | ✅ | List, get, and create documents |
 | File uploads | ❌ | Upload attachments |
 | Templates | ❌ | Bulk create issues from templates |
 | Git integration | ❌ | Link issues to branches |
