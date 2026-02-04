@@ -219,6 +219,13 @@ lin completions zsh > ~/.zfunc/_lin
 lin completions fish > ~/.config/fish/completions/lin.fish
 lin completions powershell > _lin.ps1
 lin completions elvish > lin.elv
+
+# Cache management
+lin cache status
+lin cache clear
+
+# Bypass cache for fresh data
+lin --no-cache issue list --team ENG
 ```
 
 ## Shell Completions
@@ -276,6 +283,54 @@ lin completions elvish > ~/.elvish/lib/lin.elv
 # use lin
 ```
 
+## Caching
+
+lin caches API responses locally to speed up repeated queries. The cache is stored in `~/.cache/lin/` (or the platform-appropriate cache directory).
+
+### Cache TTLs
+
+Different data types have different cache lifetimes based on how frequently they change:
+
+| Data Type | TTL | Rationale |
+|-----------|-----|-----------|
+| Teams | 1 hour | Teams rarely change |
+| Users | 1 hour | User list is stable |
+| Workflow states | 1 hour | Workflow configuration rarely changes |
+| Labels | 30 minutes | Labels change occasionally |
+| Projects | 15 minutes | Projects change moderately |
+| Cycles | 15 minutes | Cycle data changes moderately |
+| Documents | 10 minutes | Documents are edited more frequently |
+| Issues | 5 minutes | Issues change frequently |
+| Comments | 5 minutes | Comments are added frequently |
+| Search results | 2 minutes | Search should return fresh results |
+
+### Cache Commands
+
+```bash
+# View cache statistics (size, entries, expired entries)
+lin cache status
+
+# Clear all cached entries
+lin cache clear
+```
+
+### Bypassing the Cache
+
+Use the `--no-cache` flag to bypass the cache and fetch fresh data from the API:
+
+```bash
+# Fetch fresh data, ignoring any cached responses
+lin --no-cache issue list --team ENG
+lin --no-cache team list
+```
+
+### Cache Location
+
+The cache is stored in:
+- Linux: `~/.cache/lin/`
+- macOS: `~/Library/Caches/lin/`
+- Windows: `{FOLDERID_LocalAppData}/lin/`
+
 ## Features
 
 | Feature | Status | Description |
@@ -319,7 +374,7 @@ lin completions elvish > ~/.elvish/lib/lin.elv
 | **CLI Experience** | | |
 | Shell completions | ✅ | Bash, zsh, fish, PowerShell, elvish completions |
 | Interactive TUI | ❌ | Interactive terminal UI for browsing |
-| Caching | ❌ | Cache responses for faster repeated queries |
+| Caching | ✅ | Cache responses for faster repeated queries |
 | Config validation | ❌ | Validate configuration file |
 | Examples in help | ✅ | Add usage examples to --help output |
 | Human-friendly output | ✅ | Human-readable output (default) |

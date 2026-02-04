@@ -36,3 +36,5 @@ atty = "0.2"
 [dev-dependencies]
 # HTTP mocking for tests
 mockito = "1"
+# Temporary directories for cache tests
+tempfile = "3"
