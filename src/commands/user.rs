@@ -4,59 +4,64 @@
 
 use crate::api::{queries, GraphQLClient};
 use crate::models::{UsersResponse, ViewerResponse};
-use crate::output::output_success;
+use crate::output::{output, OutputFormat};
 use crate::Result;
 
 /// Get the current authenticated user's information.
 ///
 /// Fetches the viewer (authenticated user) from the Linear API and outputs
-/// the user data as JSON.
+/// the user data.
 ///
 /// # Arguments
 ///
 /// * `client` - The GraphQL client to use for the API request
+/// * `format` - The output format (Human or Json)
 ///
 /// # Example
 ///
 /// ```ignore
 /// use lin::api::GraphQLClient;
 /// use lin::commands::user::me;
+/// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
-/// me(&client)?;
+/// me(&client, OutputFormat::Human)?;
 /// ```
-pub fn me(client: &GraphQLClient) -> Result<()> {
+pub fn me(client: &GraphQLClient, format: OutputFormat) -> Result<()> {
     let response: ViewerResponse = client.query(queries::VIEWER_QUERY, serde_json::json!({}))?;
-    output_success(&response.viewer);
+    output(&response.viewer, format);
     Ok(())
 }
 
 /// List all users in the organization.
 ///
-/// Fetches users from the Linear API and outputs them as a JSON array.
+/// Fetches users from the Linear API and outputs them.
 ///
 /// # Arguments
 ///
 /// * `client` - The GraphQL client to use for the API request
+/// * `format` - The output format (Human or Json)
 ///
 /// # Example
 ///
 /// ```ignore
 /// use lin::api::GraphQLClient;
 /// use lin::commands::user::list_users;
+/// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
-/// list_users(&client)?;
+/// list_users(&client, OutputFormat::Human)?;
 /// ```
-pub fn list_users(client: &GraphQLClient) -> Result<()> {
+pub fn list_users(client: &GraphQLClient, format: OutputFormat) -> Result<()> {
     let response: UsersResponse = client.query(queries::USERS_QUERY, serde_json::json!({}))?;
-    output_success(&response.users.nodes);
+    output(&response.users.nodes, format);
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::GraphQLClient;
 
     // =============================================================================
     // me command tests
@@ -93,7 +98,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = me(&client);
+        let result = me(&client, OutputFormat::Human);
 
         // Verify success
         assert!(result.is_ok());
@@ -131,7 +136,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = me(&client);
+        let result = me(&client, OutputFormat::Human);
 
         // Verify success
         assert!(result.is_ok());
@@ -169,7 +174,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = me(&client);
+        let result = me(&client, OutputFormat::Human);
 
         // Verify success
         assert!(result.is_ok());
@@ -204,7 +209,7 @@ mod tests {
         let client = GraphQLClient::with_url("invalid-token", &server.url());
 
         // Make request
-        let result = me(&client);
+        let result = me(&client, OutputFormat::Human);
 
         // Verify error
         assert!(result.is_err());
@@ -231,7 +236,7 @@ mod tests {
         let client = GraphQLClient::with_url("invalid-token", &server.url());
 
         // Make request
-        let result = me(&client);
+        let result = me(&client, OutputFormat::Human);
 
         // Verify error
         assert!(result.is_err());
@@ -258,7 +263,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = me(&client);
+        let result = me(&client, OutputFormat::Human);
 
         // Verify error
         assert!(result.is_err());
@@ -315,7 +320,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = list_users(&client);
+        let result = list_users(&client, OutputFormat::Human);
 
         // Verify success
         assert!(result.is_ok());
@@ -349,7 +354,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = list_users(&client);
+        let result = list_users(&client, OutputFormat::Human);
 
         // Verify success (empty list is still valid)
         assert!(result.is_ok());
@@ -398,7 +403,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = list_users(&client);
+        let result = list_users(&client, OutputFormat::Human);
 
         // Verify success
         assert!(result.is_ok());
@@ -433,7 +438,7 @@ mod tests {
         let client = GraphQLClient::with_url("invalid-token", &server.url());
 
         // Make request
-        let result = list_users(&client);
+        let result = list_users(&client, OutputFormat::Human);
 
         // Verify error
         assert!(result.is_err());
@@ -460,7 +465,7 @@ mod tests {
         let client = GraphQLClient::with_url("invalid-token", &server.url());
 
         // Make request
-        let result = list_users(&client);
+        let result = list_users(&client, OutputFormat::Human);
 
         // Verify error
         assert!(result.is_err());
@@ -487,7 +492,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = list_users(&client);
+        let result = list_users(&client, OutputFormat::Human);
 
         // Verify error
         assert!(result.is_err());
@@ -531,7 +536,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = list_users(&client);
+        let result = list_users(&client, OutputFormat::Human);
 
         // Verify success
         assert!(result.is_ok());
@@ -571,7 +576,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = list_users(&client);
+        let result = list_users(&client, OutputFormat::Human);
 
         // Verify success
         assert!(result.is_ok());

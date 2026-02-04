@@ -2,12 +2,12 @@
 //!
 //! Entry point for the CLI application.
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
 use lin::commands::{issue, org, team, user};
 use lin::config::Config;
-use lin::output::{output_error, output_success};
+use lin::output::{output_error_with_format, output_success, OutputFormat};
 use serde::Serialize;
 
 /// lin - A command-line interface for Linear
@@ -24,22 +24,12 @@ struct Cli {
     #[arg(long, short, global = true)]
     org: Option<String>,
 
-    /// Output format
-    #[arg(long, global = true, default_value = "json")]
-    output: OutputFormat,
+    /// Output in JSON format (default: human-friendly output)
+    #[arg(long, global = true)]
+    json: bool,
 
     #[command(subcommand)]
     command: Commands,
-}
-
-/// Output format for CLI responses.
-#[derive(Debug, Clone, Copy, ValueEnum, Default)]
-pub enum OutputFormat {
-    /// JSON output (default, for scriptability)
-    #[default]
-    Json,
-    /// Pretty-printed output with colors
-    Pretty,
 }
 
 /// Top-level commands for the lin CLI.
@@ -187,32 +177,33 @@ struct PlaceholderResponse {
 
 fn main() {
     let cli = Cli::parse();
+    let format = OutputFormat::from_json_flag(cli.json);
 
-    if let Err(err) = run(cli) {
-        output_error(&err);
+    if let Err(err) = run(cli, format) {
+        output_error_with_format(&err, format);
     }
 }
 
-fn run(cli: Cli) -> lin::Result<()> {
+fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
     match &cli.command {
         // Org commands don't all require an API token
-        Commands::Org { command } => handle_org_command(command, &cli),
+        Commands::Org { command } => handle_org_command(command, &cli, format),
         // All other commands require an API token
         _ => {
             let config = Config::load()?;
             let token = require_api_token(cli.api_token.as_deref(), &config, cli.org.as_deref())?;
 
             match cli.command {
-                Commands::Issue { command } => handle_issue_command(command, &token),
-                Commands::Team { command } => handle_team_command(command, &token),
-                Commands::User { command } => handle_user_command(command, &token),
+                Commands::Issue { command } => handle_issue_command(command, &token, format),
+                Commands::Team { command } => handle_team_command(command, &token, format),
+                Commands::User { command } => handle_user_command(command, &token, format),
                 Commands::Org { .. } => unreachable!(),
             }
         }
     }
 }
 
-fn handle_issue_command(command: IssueCommands, token: &str) -> lin::Result<()> {
+fn handle_issue_command(command: IssueCommands, token: &str, format: OutputFormat) -> lin::Result<()> {
     let client = GraphQLClient::new(token);
 
     match command {
@@ -237,9 +228,9 @@ fn handle_issue_command(command: IssueCommands, token: &str) -> lin::Result<()> 
                 state,
                 limit: Some(limit as i32),
             };
-            issue::list_issues(&client, viewer_id.as_deref(), options)
+            issue::list_issues(&client, viewer_id.as_deref(), options, format)
         }
-        IssueCommands::Get { identifier } => issue::get_issue(&client, &identifier),
+        IssueCommands::Get { identifier } => issue::get_issue(&client, &identifier, format),
         IssueCommands::Create {
             title,
             team,
@@ -256,7 +247,7 @@ fn handle_issue_command(command: IssueCommands, token: &str) -> lin::Result<()> 
                 state_id: state,
                 priority: priority.map(|p| p as i32),
             };
-            issue::create_issue(&client, options)
+            issue::create_issue(&client, options, format)
         }
         IssueCommands::Update {
             identifier,
@@ -273,35 +264,35 @@ fn handle_issue_command(command: IssueCommands, token: &str) -> lin::Result<()> 
                 state_id: state,
                 priority: priority.map(|p| p as i32),
             };
-            issue::update_issue(&client, &identifier, options)
+            issue::update_issue(&client, &identifier, options, format)
         }
     }
 }
 
-fn handle_team_command(command: TeamCommands, token: &str) -> lin::Result<()> {
+fn handle_team_command(command: TeamCommands, token: &str, format: OutputFormat) -> lin::Result<()> {
     let client = GraphQLClient::new(token);
 
     match command {
-        TeamCommands::List => team::list_teams(&client),
-        TeamCommands::Get { identifier } => team::get_team(&client, &identifier),
+        TeamCommands::List => team::list_teams(&client, format),
+        TeamCommands::Get { identifier } => team::get_team(&client, &identifier, format),
     }
 }
 
-fn handle_user_command(command: UserCommands, token: &str) -> lin::Result<()> {
+fn handle_user_command(command: UserCommands, token: &str, format: OutputFormat) -> lin::Result<()> {
     let client = GraphQLClient::new(token);
 
     match command {
-        UserCommands::Me => user::me(&client),
-        UserCommands::List => user::list_users(&client),
+        UserCommands::Me => user::me(&client, format),
+        UserCommands::List => user::list_users(&client, format),
     }
 }
 
-fn handle_org_command(command: &OrgCommands, cli: &Cli) -> lin::Result<()> {
+fn handle_org_command(command: &OrgCommands, cli: &Cli, format: OutputFormat) -> lin::Result<()> {
     match command {
-        OrgCommands::Add { name } => org::add_org(name),
-        OrgCommands::Remove { name } => org::remove_org(name),
-        OrgCommands::List => org::list_orgs(),
-        OrgCommands::SetDefault { name } => org::set_default_org(name),
+        OrgCommands::Add { name } => org::add_org(name, format),
+        OrgCommands::Remove { name } => org::remove_org(name, format),
+        OrgCommands::List => org::list_orgs(format),
+        OrgCommands::SetDefault { name } => org::set_default_org(name, format),
         OrgCommands::Info => {
             // Info requires API token
             let config = Config::load()?;

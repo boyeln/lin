@@ -5,7 +5,7 @@
 use crate::api::{queries, GraphQLClient};
 use crate::error::LinError;
 use crate::models::{IssueCreateResponse, IssueResponse, IssueUpdateResponse, IssuesResponse};
-use crate::output::output_success;
+use crate::output::{output, OutputFormat};
 use crate::Result;
 
 /// Options for listing issues.
@@ -173,19 +173,21 @@ pub fn parse_identifier(s: &str) -> Result<(String, i32)> {
 
 /// List issues with optional filters.
 ///
-/// Fetches issues from the Linear API and outputs them as a JSON array.
+/// Fetches issues from the Linear API and outputs them.
 ///
 /// # Arguments
 ///
 /// * `client` - The GraphQL client to use for the API request
 /// * `viewer_id` - The current user's ID (used if assignee is "me")
 /// * `options` - Filter options for the query
+/// * `format` - The output format (Human or Json)
 ///
 /// # Example
 ///
 /// ```ignore
 /// use lin::api::GraphQLClient;
 /// use lin::commands::issue::{list_issues, IssueListOptions};
+/// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// let options = IssueListOptions {
@@ -194,12 +196,13 @@ pub fn parse_identifier(s: &str) -> Result<(String, i32)> {
 ///     state: None,
 ///     limit: Some(10),
 /// };
-/// list_issues(&client, None, options)?;
+/// list_issues(&client, None, options, OutputFormat::Human)?;
 /// ```
 pub fn list_issues(
     client: &GraphQLClient,
     viewer_id: Option<&str>,
     options: IssueListOptions,
+    format: OutputFormat,
 ) -> Result<()> {
     // Build the filter object
     let mut filter = serde_json::Map::new();
@@ -253,13 +256,13 @@ pub fn list_issues(
     let response: IssuesResponse =
         client.query(queries::ISSUES_QUERY, serde_json::Value::Object(variables))?;
 
-    output_success(&response.issues.nodes);
+    output(&response.issues.nodes, format);
     Ok(())
 }
 
 /// Get details of a specific issue by ID or identifier.
 ///
-/// Fetches a single issue from the Linear API and outputs it as JSON.
+/// Fetches a single issue from the Linear API and outputs it.
 /// Supports both UUID format (e.g., "550e8400-e29b-41d4-a716-446655440000")
 /// and identifier format (e.g., "ENG-123").
 ///
@@ -267,29 +270,31 @@ pub fn list_issues(
 ///
 /// * `client` - The GraphQL client to use for the API request
 /// * `id_or_identifier` - The issue's UUID or human-readable identifier
+/// * `format` - The output format (Human or Json)
 ///
 /// # Example
 ///
 /// ```ignore
 /// use lin::api::GraphQLClient;
 /// use lin::commands::issue::get_issue;
+/// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 ///
 /// // By UUID
-/// get_issue(&client, "550e8400-e29b-41d4-a716-446655440000")?;
+/// get_issue(&client, "550e8400-e29b-41d4-a716-446655440000", OutputFormat::Human)?;
 ///
 /// // By identifier
-/// get_issue(&client, "ENG-123")?;
+/// get_issue(&client, "ENG-123", OutputFormat::Human)?;
 /// ```
-pub fn get_issue(client: &GraphQLClient, id_or_identifier: &str) -> Result<()> {
+pub fn get_issue(client: &GraphQLClient, id_or_identifier: &str, format: OutputFormat) -> Result<()> {
     if is_uuid(id_or_identifier) {
         // Query by UUID
         let variables = serde_json::json!({
             "id": id_or_identifier
         });
         let response: IssueResponse = client.query(queries::ISSUE_QUERY, variables)?;
-        output_success(&response.issue);
+        output(&response.issue, format);
     } else {
         // Parse as identifier and query
         let (team_key, number) = parse_identifier(id_or_identifier)?;
@@ -312,7 +317,7 @@ pub fn get_issue(client: &GraphQLClient, id_or_identifier: &str) -> Result<()> {
             )));
         }
 
-        output_success(&response.issues.nodes[0]);
+        output(&response.issues.nodes[0], format);
     }
 
     Ok(())
@@ -320,18 +325,20 @@ pub fn get_issue(client: &GraphQLClient, id_or_identifier: &str) -> Result<()> {
 
 /// Create a new issue in Linear.
 ///
-/// Creates an issue with the specified options and outputs the created issue as JSON.
+/// Creates an issue with the specified options and outputs the created issue.
 ///
 /// # Arguments
 ///
 /// * `client` - The GraphQL client to use for the API request
 /// * `options` - Options for the new issue (title and team_id are required)
+/// * `format` - The output format (Human or Json)
 ///
 /// # Example
 ///
 /// ```ignore
 /// use lin::api::GraphQLClient;
 /// use lin::commands::issue::{create_issue, IssueCreateOptions};
+/// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// let options = IssueCreateOptions {
@@ -342,9 +349,9 @@ pub fn get_issue(client: &GraphQLClient, id_or_identifier: &str) -> Result<()> {
 ///     state_id: None,
 ///     priority: Some(2), // High priority
 /// };
-/// create_issue(&client, options)?;
+/// create_issue(&client, options, OutputFormat::Human)?;
 /// ```
-pub fn create_issue(client: &GraphQLClient, options: IssueCreateOptions) -> Result<()> {
+pub fn create_issue(client: &GraphQLClient, options: IssueCreateOptions, format: OutputFormat) -> Result<()> {
     // Build the input object for the mutation
     let mut input = serde_json::Map::new();
     input.insert("title".to_string(), serde_json::json!(options.title));
@@ -378,7 +385,7 @@ pub fn create_issue(client: &GraphQLClient, options: IssueCreateOptions) -> Resu
 
     match response.issue_create.issue {
         Some(issue) => {
-            output_success(&issue);
+            output(&issue, format);
             Ok(())
         }
         None => Err(LinError::api(
@@ -390,19 +397,21 @@ pub fn create_issue(client: &GraphQLClient, options: IssueCreateOptions) -> Resu
 /// Update an existing issue in Linear.
 ///
 /// Updates an issue identified by ID or identifier (e.g., "ENG-123") and outputs
-/// the updated issue as JSON.
+/// the updated issue.
 ///
 /// # Arguments
 ///
 /// * `client` - The GraphQL client to use for the API request
 /// * `id_or_identifier` - The issue's UUID or human-readable identifier
 /// * `options` - Fields to update (all optional)
+/// * `format` - The output format (Human or Json)
 ///
 /// # Example
 ///
 /// ```ignore
 /// use lin::api::GraphQLClient;
 /// use lin::commands::issue::{update_issue, IssueUpdateOptions};
+/// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// let options = IssueUpdateOptions {
@@ -410,12 +419,13 @@ pub fn create_issue(client: &GraphQLClient, options: IssueCreateOptions) -> Resu
 ///     priority: Some(1), // Urgent
 ///     ..Default::default()
 /// };
-/// update_issue(&client, "ENG-123", options)?;
+/// update_issue(&client, "ENG-123", options, OutputFormat::Human)?;
 /// ```
 pub fn update_issue(
     client: &GraphQLClient,
     id_or_identifier: &str,
     options: IssueUpdateOptions,
+    format: OutputFormat,
 ) -> Result<()> {
     // First, resolve the issue ID if given an identifier
     let issue_id = if is_uuid(id_or_identifier) {
@@ -480,7 +490,7 @@ pub fn update_issue(
 
     match response.issue_update.issue {
         Some(issue) => {
-            output_success(&issue);
+            output(&issue, format);
             Ok(())
         }
         None => Err(LinError::api(
@@ -493,6 +503,7 @@ pub fn update_issue(
 mod tests {
     use super::*;
     use crate::api::GraphQLClient;
+    use crate::output::OutputFormat;
 
     // =============================================================================
     // is_uuid tests
@@ -702,7 +713,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
         let options = IssueListOptions::default();
 
-        let result = list_issues(&client, None, options);
+        let result = list_issues(&client, None, options, OutputFormat::Human);
         assert!(result.is_ok());
         mock.assert();
     }
@@ -732,7 +743,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = list_issues(&client, None, options);
+        let result = list_issues(&client, None, options, OutputFormat::Human);
         assert!(result.is_ok());
         mock.assert();
     }
@@ -762,7 +773,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = list_issues(&client, Some("user-123"), options);
+        let result = list_issues(&client, Some("user-123"), options, OutputFormat::Human);
         assert!(result.is_ok());
         mock.assert();
     }
@@ -776,7 +787,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = list_issues(&client, None, options);
+        let result = list_issues(&client, None, options, OutputFormat::Human);
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("Cannot use 'me'"));
@@ -807,7 +818,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = list_issues(&client, None, options);
+        let result = list_issues(&client, None, options, OutputFormat::Human);
         assert!(result.is_ok());
         mock.assert();
     }
@@ -837,7 +848,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = list_issues(&client, None, options);
+        let result = list_issues(&client, None, options, OutputFormat::Human);
         assert!(result.is_ok());
         mock.assert();
     }
@@ -869,7 +880,7 @@ mod tests {
             limit: Some(25),
         };
 
-        let result = list_issues(&client, None, options);
+        let result = list_issues(&client, None, options, OutputFormat::Human);
         assert!(result.is_ok());
         mock.assert();
     }
@@ -897,7 +908,7 @@ mod tests {
         let client = GraphQLClient::with_url("invalid-token", &server.url());
         let options = IssueListOptions::default();
 
-        let result = list_issues(&client, None, options);
+        let result = list_issues(&client, None, options, OutputFormat::Human);
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("Not authenticated"));
@@ -926,7 +937,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
         let options = IssueListOptions::default();
 
-        let result = list_issues(&client, None, options);
+        let result = list_issues(&client, None, options, OutputFormat::Human);
         assert!(result.is_ok());
         mock.assert();
     }
@@ -981,7 +992,7 @@ mod tests {
             .create();
 
         let client = GraphQLClient::with_url("test-token", &server.url());
-        let result = get_issue(&client, "550e8400-e29b-41d4-a716-446655440000");
+        let result = get_issue(&client, "550e8400-e29b-41d4-a716-446655440000", OutputFormat::Human);
 
         assert!(result.is_ok());
         mock.assert();
@@ -1031,7 +1042,7 @@ mod tests {
             .create();
 
         let client = GraphQLClient::with_url("test-token", &server.url());
-        let result = get_issue(&client, "ENG-123");
+        let result = get_issue(&client, "ENG-123", OutputFormat::Human);
 
         assert!(result.is_ok());
         mock.assert();
@@ -1057,7 +1068,7 @@ mod tests {
             .create();
 
         let client = GraphQLClient::with_url("test-token", &server.url());
-        let result = get_issue(&client, "ENG-99999");
+        let result = get_issue(&client, "ENG-99999", OutputFormat::Human);
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -1086,7 +1097,7 @@ mod tests {
             .create();
 
         let client = GraphQLClient::with_url("test-token", &server.url());
-        let result = get_issue(&client, "550e8400-e29b-41d4-a716-446655440000");
+        let result = get_issue(&client, "550e8400-e29b-41d4-a716-446655440000", OutputFormat::Human);
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -1099,7 +1110,7 @@ mod tests {
         let server = mockito::Server::new();
         let client = GraphQLClient::with_url("test-token", &server.url());
 
-        let result = get_issue(&client, "invalid-identifier");
+        let result = get_issue(&client, "invalid-identifier", OutputFormat::Human);
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("Invalid team key"));
@@ -1126,7 +1137,7 @@ mod tests {
             .create();
 
         let client = GraphQLClient::with_url("invalid-token", &server.url());
-        let result = get_issue(&client, "550e8400-e29b-41d4-a716-446655440000");
+        let result = get_issue(&client, "550e8400-e29b-41d4-a716-446655440000", OutputFormat::Human);
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -1145,7 +1156,7 @@ mod tests {
             .create();
 
         let client = GraphQLClient::with_url("test-token", &server.url());
-        let result = get_issue(&client, "ENG-123");
+        let result = get_issue(&client, "ENG-123", OutputFormat::Human);
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -1182,7 +1193,7 @@ mod tests {
             .create();
 
         let client = GraphQLClient::with_url("test-token", &server.url());
-        let result = get_issue(&client, "550e8400e29b41d4a716446655440000");
+        let result = get_issue(&client, "550e8400e29b41d4a716446655440000", OutputFormat::Human);
 
         assert!(result.is_ok());
         mock.assert();
@@ -1239,7 +1250,7 @@ mod tests {
             priority: None,
         };
 
-        let result = create_issue(&client, options);
+        let result = create_issue(&client, options, OutputFormat::Human);
         assert!(result.is_ok());
         mock.assert();
     }
@@ -1302,7 +1313,7 @@ mod tests {
             priority: Some(2),
         };
 
-        let result = create_issue(&client, options);
+        let result = create_issue(&client, options, OutputFormat::Human);
         assert!(result.is_ok());
         mock.assert();
     }
@@ -1337,7 +1348,7 @@ mod tests {
             priority: None,
         };
 
-        let result = create_issue(&client, options);
+        let result = create_issue(&client, options, OutputFormat::Human);
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("Failed to create issue"));
@@ -1374,7 +1385,7 @@ mod tests {
             priority: None,
         };
 
-        let result = create_issue(&client, options);
+        let result = create_issue(&client, options, OutputFormat::Human);
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("Not authenticated"));
@@ -1436,7 +1447,7 @@ mod tests {
             priority: Some(1),
         };
 
-        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options);
+        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options, OutputFormat::Human);
         assert!(result.is_ok());
         mock.assert();
     }
@@ -1510,7 +1521,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = update_issue(&client, "ENG-123", options);
+        let result = update_issue(&client, "ENG-123", options, OutputFormat::Human);
         assert!(result.is_ok());
         lookup_mock.assert();
         update_mock.assert();
@@ -1541,7 +1552,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = update_issue(&client, "ENG-99999", options);
+        let result = update_issue(&client, "ENG-99999", options, OutputFormat::Human);
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("not found"));
@@ -1558,7 +1569,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = update_issue(&client, "invalid-identifier", options);
+        let result = update_issue(&client, "invalid-identifier", options, OutputFormat::Human);
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("Invalid team key"));
@@ -1590,7 +1601,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options);
+        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options, OutputFormat::Human);
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("Failed to update issue"));
@@ -1639,7 +1650,7 @@ mod tests {
             priority: Some(3),
         };
 
-        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options);
+        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options, OutputFormat::Human);
         assert!(result.is_ok());
         mock.assert();
     }
@@ -1670,7 +1681,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options);
+        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options, OutputFormat::Human);
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("Not authenticated"));
