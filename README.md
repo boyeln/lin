@@ -98,7 +98,6 @@ lin org set-default <name>
 | Token from CLI | ✅ | Pass token via --api-token flag |
 | Token from env | ✅ | Read token from LINEAR_API_TOKEN |
 | Token from file | ✅ | Read token from config file |
-| **Planned Features** | | |
 | Comments | ❌ | Add/list comments on issues |
 | Projects | ❌ | List and filter by projects |
 | Cycles/Sprints | ❌ | View and manage cycles |
@@ -109,6 +108,20 @@ lin org set-default <name>
 | Templates | ❌ | Bulk create issues from templates |
 | Git integration | ❌ | Link issues to branches |
 | Search | ❌ | Full-text search for issues |
+| **Core Issue Operations** | | |
+| Delete issues | ❌ | Delete an issue by ID or identifier |
+| Archive/unarchive | ❌ | Archive or unarchive issues |
+| Issue relations | ❌ | Parent/child, blocks/blocked by, relates to |
+| **Advanced Filtering** | | |
+| Date range filters | ❌ | Filter by created/updated date ranges |
+| Sort options | ❌ | Sort by priority, updated date, created date |
+| Combined filters | ❌ | Complex filter combinations |
+| **CLI Experience** | | |
+| Shell completions | ❌ | Bash, zsh, fish completions |
+| Interactive TUI | ❌ | Interactive terminal UI for browsing |
+| Caching | ❌ | Cache responses for faster repeated queries |
+| Config validation | ❌ | Validate configuration file |
+| Examples in help | ❌ | Add usage examples to --help output |
 | Human-friendly output | ✅ | Human-readable output (default) |
 | JSON output | ✅ | Machine-readable JSON output (--json flag) |
 | Colored output | ❌ | Syntax highlighting and colors for terminal |
