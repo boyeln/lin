@@ -3,8 +3,9 @@
 //! Entry point for the CLI application.
 
 use clap::{Parser, Subcommand, ValueEnum};
+use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
-use lin::commands::org;
+use lin::commands::{org, team};
 use lin::config::Config;
 use lin::output::{output_error, output_success};
 use serde::Serialize;
@@ -190,7 +191,7 @@ fn run(cli: Cli) -> lin::Result<()> {
         // All other commands require an API token
         _ => {
             let config = Config::load()?;
-            let _token = require_api_token(
+            let token = require_api_token(
                 cli.api_token.as_deref(),
                 &config,
                 cli.org.as_deref(),
@@ -198,7 +199,7 @@ fn run(cli: Cli) -> lin::Result<()> {
 
             match cli.command {
                 Commands::Issue { command } => handle_issue_command(command),
-                Commands::Team { command } => handle_team_command(command),
+                Commands::Team { command } => handle_team_command(command, &token),
                 Commands::User { command } => handle_user_command(command),
                 Commands::Org { .. } => unreachable!(),
             }
@@ -229,19 +230,13 @@ fn handle_issue_command(command: IssueCommands) -> lin::Result<()> {
     Ok(())
 }
 
-fn handle_team_command(command: TeamCommands) -> lin::Result<()> {
-    let response = match command {
-        TeamCommands::List => PlaceholderResponse {
-            message: "Command not yet implemented",
-            command: "team list".into(),
-        },
-        TeamCommands::Get { identifier } => PlaceholderResponse {
-            message: "Command not yet implemented",
-            command: format!("team get {}", identifier),
-        },
-    };
-    output_success(&response);
-    Ok(())
+fn handle_team_command(command: TeamCommands, token: &str) -> lin::Result<()> {
+    let client = GraphQLClient::new(token);
+
+    match command {
+        TeamCommands::List => team::list_teams(&client),
+        TeamCommands::Get { identifier } => team::get_team(&client, &identifier),
+    }
 }
 
 fn handle_user_command(command: UserCommands) -> lin::Result<()> {
