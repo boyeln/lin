@@ -162,6 +162,11 @@ lin org list
 lin org add <name>
 lin org remove <name>
 lin org set-default <name>
+
+# Search for issues
+lin search "authentication bug"
+lin search "fix login" --team ENG --limit 10
+lin search "urgent" --assignee me --state "In Progress"
 ```
 
 ## Features
@@ -196,7 +201,7 @@ lin org set-default <name>
 | File uploads | ✅ | Upload attachments to issues, list and get attachment details |
 | Git integration | ✅ | Link branches and PRs to issues, list git links |
 | Templates | ❌ | Bulk create issues from templates |
-| Search | ❌ | Full-text search for issues |
+| Search | ✅ | Full-text search for issues |
 | **Issue Relations** | | |
 | Issue relations | ❌ | Parent/child, blocks/blocked by, relates to |
 | **Advanced Filtering** | | |

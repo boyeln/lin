@@ -657,6 +657,14 @@ pub struct IssuesResponse {
     pub issues: IssueConnection,
 }
 
+/// Response wrapper for the issue search query.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueSearchResponse {
+    /// Search results as paginated list of issues.
+    pub issue_search: IssueConnection,
+}
+
 /// Team with workflow states for the workflow states query.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -1596,5 +1604,31 @@ mod tests {
             response.file_upload.upload_file.headers[0].key,
             "Content-Type"
         );
+    }
+
+    #[test]
+    fn test_issue_search_response_deserialization() {
+        let json = r#"{
+            "issueSearch": {
+                "nodes": [
+                    {
+                        "id": "issue-1",
+                        "identifier": "ENG-123",
+                        "title": "Search result issue",
+                        "description": "Found via search",
+                        "priority": 2,
+                        "state": null,
+                        "team": null,
+                        "assignee": null,
+                        "createdAt": "2024-01-01T00:00:00.000Z",
+                        "updatedAt": "2024-01-01T00:00:00.000Z"
+                    }
+                ]
+            }
+        }"#;
+        let response: IssueSearchResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(response.issue_search.nodes.len(), 1);
+        assert_eq!(response.issue_search.nodes[0].identifier, "ENG-123");
+        assert_eq!(response.issue_search.nodes[0].title, "Search result issue");
     }
 }

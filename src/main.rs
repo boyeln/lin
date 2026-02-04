@@ -6,7 +6,8 @@ use clap::{Parser, Subcommand};
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
 use lin::commands::{
-    attachment, comment, cycle, document, git, issue, label, org, project, team, user, workflow,
+    attachment, comment, cycle, document, git, issue, label, org, project, search, team, user,
+    workflow,
 };
 use lin::config::Config;
 use lin::output::{init_colors, output_error_with_format, output_success, OutputFormat};
@@ -96,6 +97,27 @@ enum Commands {
     Document {
         #[command(subcommand)]
         command: DocumentCommands,
+    },
+    /// Search for issues
+    #[command(after_help = "EXAMPLES:\n  \
+    lin search \"authentication bug\"\n  \
+    lin search \"fix login\" --team ENG --limit 10\n  \
+    lin search \"urgent\" --assignee me --state \"In Progress\"")]
+    Search {
+        /// The search query string
+        query: String,
+        /// Filter by team identifier (e.g., "ENG")
+        #[arg(long)]
+        team: Option<String>,
+        /// Filter by assignee (user ID or "me" for current user)
+        #[arg(long)]
+        assignee: Option<String>,
+        /// Filter by state name (e.g., "In Progress", "Done")
+        #[arg(long)]
+        state: Option<String>,
+        /// Maximum number of results to return
+        #[arg(long, default_value = "50")]
+        limit: u32,
     },
 }
 
@@ -518,6 +540,13 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
                 Commands::Cycle { command } => handle_cycle_command(command, &token, format),
                 Commands::Label { command } => handle_label_command(command, &token, format),
                 Commands::Document { command } => handle_document_command(command, &token, format),
+                Commands::Search {
+                    query,
+                    team,
+                    assignee,
+                    state,
+                    limit,
+                } => handle_search_command(&token, &query, team, assignee, state, limit, format),
                 Commands::Org { .. } => unreachable!(),
             }
         }
@@ -784,4 +813,34 @@ fn handle_org_command(command: &OrgCommands, cli: &Cli, format: OutputFormat) ->
             Ok(())
         }
     }
+}
+
+fn handle_search_command(
+    token: &str,
+    query: &str,
+    team: Option<String>,
+    assignee: Option<String>,
+    state: Option<String>,
+    limit: u32,
+    format: OutputFormat,
+) -> lin::Result<()> {
+    let client = GraphQLClient::new(token);
+
+    // If assignee is "me", we need to fetch the viewer ID first
+    let viewer_id = if assignee.as_deref() == Some("me") {
+        let response: lin::models::ViewerResponse =
+            client.query(lin::api::queries::VIEWER_QUERY, serde_json::json!({}))?;
+        Some(response.viewer.id)
+    } else {
+        None
+    };
+
+    let options = search::SearchOptions {
+        team,
+        assignee,
+        state,
+        limit: Some(limit as i32),
+    };
+
+    search::search_issues(&client, query, viewer_id.as_deref(), options, format)
 }

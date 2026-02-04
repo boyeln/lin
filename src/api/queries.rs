@@ -963,6 +963,49 @@ query IssueGitLinks($id: String!) {
 }
 "#;
 
+/// Query to search issues by full-text search.
+///
+/// Variables:
+/// - `query` (String!): The search query string
+/// - `first` (Int, optional): Number of issues to fetch (default: 50)
+/// - `filter` (IssueFilter, optional): Additional filters to apply
+///
+/// Returns: `IssueSearchResponse`
+pub const ISSUE_SEARCH_QUERY: &str = r#"
+query IssueSearch($query: String!, $first: Int, $filter: IssueFilter) {
+    issueSearch(query: $query, first: $first, filter: $filter) {
+        nodes {
+            id
+            identifier
+            title
+            description
+            priority
+            createdAt
+            updatedAt
+            state {
+                id
+                name
+                color
+                type
+            }
+            team {
+                id
+                key
+                name
+                description
+            }
+            assignee {
+                id
+                name
+                email
+                displayName
+                active
+            }
+        }
+    }
+}
+"#;
+
 /// Mutation to create a file upload URL.
 ///
 /// This returns a presigned URL where the file should be uploaded,
@@ -1250,5 +1293,19 @@ mod tests {
         assert!(ISSUE_GIT_LINKS_QUERY.contains("attachments"));
         assert!(ISSUE_GIT_LINKS_QUERY.contains("nodes"));
         assert!(ISSUE_GIT_LINKS_QUERY.contains("url"));
+    }
+
+    #[test]
+    fn test_issue_search_query_is_valid() {
+        assert!(ISSUE_SEARCH_QUERY.contains("query IssueSearch"));
+        assert!(ISSUE_SEARCH_QUERY.contains("$query: String!"));
+        assert!(ISSUE_SEARCH_QUERY.contains("$first: Int"));
+        assert!(ISSUE_SEARCH_QUERY.contains("$filter: IssueFilter"));
+        assert!(ISSUE_SEARCH_QUERY.contains("issueSearch"));
+        assert!(ISSUE_SEARCH_QUERY.contains("nodes"));
+        assert!(ISSUE_SEARCH_QUERY.contains("identifier"));
+        assert!(ISSUE_SEARCH_QUERY.contains("state"));
+        assert!(ISSUE_SEARCH_QUERY.contains("team"));
+        assert!(ISSUE_SEARCH_QUERY.contains("assignee"));
     }
 }
