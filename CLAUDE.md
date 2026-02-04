@@ -51,3 +51,4 @@ cargo clippy && cargo fmt --check # Lint before commit
   cargo test && cargo fmt --check && cargo clippy
   ```
 - Do not commit if any of these checks fail
+- Do not mention Claude or AI assistance in commit messages
