@@ -55,6 +55,28 @@ query Team($id: String!) {
 }
 "#;
 
+/// Query to list workflow states for a team.
+///
+/// Variables:
+/// - `id` (String!): The team's unique identifier (UUID or key)
+///
+/// Returns: `WorkflowStatesResponse`
+pub const WORKFLOW_STATES_QUERY: &str = r#"
+query WorkflowStates($id: String!) {
+    team(id: $id) {
+        id
+        states {
+            nodes {
+                id
+                name
+                color
+                type
+            }
+        }
+    }
+}
+"#;
+
 /// Query to list users in the organization.
 ///
 /// Variables:
@@ -338,6 +360,16 @@ mod tests {
         assert!(TEAM_QUERY.contains("query Team"));
         assert!(TEAM_QUERY.contains("$id: String!"));
         assert!(TEAM_QUERY.contains("team(id: $id)"));
+    }
+
+    #[test]
+    fn test_workflow_states_query_is_valid() {
+        assert!(WORKFLOW_STATES_QUERY.contains("query WorkflowStates"));
+        assert!(WORKFLOW_STATES_QUERY.contains("$id: String!"));
+        assert!(WORKFLOW_STATES_QUERY.contains("team(id: $id)"));
+        assert!(WORKFLOW_STATES_QUERY.contains("states"));
+        assert!(WORKFLOW_STATES_QUERY.contains("nodes"));
+        assert!(WORKFLOW_STATES_QUERY.contains("type"));
     }
 
     #[test]

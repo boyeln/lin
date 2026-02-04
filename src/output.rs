@@ -7,7 +7,7 @@ use colored::Colorize;
 use serde::Serialize;
 
 use crate::error::LinError;
-use crate::models::{Issue, Team, User};
+use crate::models::{Issue, Team, User, WorkflowState};
 
 /// Initialize color support based on terminal capabilities.
 ///
@@ -98,6 +98,23 @@ impl HumanDisplay for Team {
             format!("[{}]", self.key).cyan(),
             self.name.bold(),
             desc
+        )
+    }
+}
+
+impl HumanDisplay for WorkflowState {
+    fn human_fmt(&self) -> String {
+        let type_label = match self.type_.as_str() {
+            "backlog" => "Backlog",
+            "unstarted" => "Unstarted",
+            "started" => "Started",
+            "completed" => "Completed",
+            "canceled" => "Canceled",
+            other => other,
+        };
+        format!(
+            "{} [{}]\n  ID: {}\n  Color: {}",
+            self.name, type_label, self.id, self.color
         )
     }
 }
@@ -373,6 +390,21 @@ mod tests {
         assert!(output.contains("Fix the bug"));
         assert!(output.contains("Status: In Progress"));
         assert!(output.contains("Priority: High"));
+    }
+
+    #[test]
+    fn test_workflow_state_human_display() {
+        let state = WorkflowState {
+            id: "state-123".to_string(),
+            name: "In Progress".to_string(),
+            color: "#0066ff".to_string(),
+            type_: "started".to_string(),
+        };
+        let output = state.human_fmt();
+        assert!(output.contains("In Progress"));
+        assert!(output.contains("[Started]"));
+        assert!(output.contains("state-123"));
+        assert!(output.contains("#0066ff"));
     }
 
     #[test]
