@@ -131,10 +131,13 @@ enum IssueCommands {
     lin issue list --project <project-id>\n  \
     lin issue list --cycle <cycle-id>\n  \
     lin issue list --label <label-id>\n  \
+    lin issue list --priority urgent\n  \
+    lin issue list --priority 2\n  \
     lin issue list --created-after 2024-01-01\n  \
     lin issue list --updated-before 2024-12-31\n  \
     lin issue list --sort priority --order asc\n  \
-    lin issue list --sort updated --order desc")]
+    lin issue list --sort updated --order desc\n  \
+    lin issue list --team ENG --assignee me --priority high")]
     List {
         /// Filter by team identifier
         #[arg(long)]
@@ -154,6 +157,9 @@ enum IssueCommands {
         /// Filter by label ID
         #[arg(long)]
         label: Option<String>,
+        /// Filter by priority (0-4 or: none, urgent, high, normal, low)
+        #[arg(long)]
+        priority: Option<String>,
         /// Maximum number of issues to return
         #[arg(long, default_value = "50")]
         limit: u32,
@@ -618,6 +624,7 @@ fn handle_issue_command(
             project,
             cycle,
             label,
+            priority,
             limit,
             created_after,
             created_before,
@@ -661,6 +668,19 @@ fn handle_issue_command(
                 None
             };
 
+            // Parse priority filter if provided
+            let priority_filter = if let Some(priority_str) = &priority {
+                let prio = issue::PriorityFilter::parse(priority_str).ok_or_else(|| {
+                    lin::error::LinError::config(format!(
+                        "Invalid priority '{}'. Valid values: 0-4 or none, urgent, high, normal, low",
+                        priority_str
+                    ))
+                })?;
+                Some(prio)
+            } else {
+                None
+            };
+
             let options = issue::IssueListOptions {
                 team,
                 assignee,
@@ -668,6 +688,7 @@ fn handle_issue_command(
                 project,
                 cycle,
                 label,
+                priority: priority_filter,
                 limit: Some(limit as i32),
                 created_after,
                 created_before,

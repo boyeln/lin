@@ -80,6 +80,48 @@ impl SortOrder {
     }
 }
 
+/// Priority level for filtering issues.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PriorityFilter {
+    /// No priority (0).
+    None,
+    /// Urgent priority (1).
+    Urgent,
+    /// High priority (2).
+    High,
+    /// Normal/Medium priority (3).
+    Normal,
+    /// Low priority (4).
+    Low,
+}
+
+impl PriorityFilter {
+    /// Parse a priority filter from a string.
+    ///
+    /// Accepts both numeric values (0-4) and named values (none, urgent, high, normal, low).
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "0" | "none" => Some(Self::None),
+            "1" | "urgent" => Some(Self::Urgent),
+            "2" | "high" => Some(Self::High),
+            "3" | "normal" | "medium" => Some(Self::Normal),
+            "4" | "low" => Some(Self::Low),
+            _ => None,
+        }
+    }
+
+    /// Get the numeric value for this priority.
+    pub fn to_value(&self) -> i32 {
+        match self {
+            Self::None => 0,
+            Self::Urgent => 1,
+            Self::High => 2,
+            Self::Normal => 3,
+            Self::Low => 4,
+        }
+    }
+}
+
 /// Options for listing issues.
 #[derive(Debug, Clone, Default)]
 pub struct IssueListOptions {
@@ -95,6 +137,8 @@ pub struct IssueListOptions {
     pub cycle: Option<String>,
     /// Filter by label ID.
     pub label: Option<String>,
+    /// Filter by priority level.
+    pub priority: Option<PriorityFilter>,
     /// Maximum number of issues to return (default 50).
     pub limit: Option<i32>,
     /// Filter issues created after this date (YYYY-MM-DD format).
@@ -357,6 +401,14 @@ pub fn list_issues(
         filter.insert(
             "labels".to_string(),
             serde_json::json!({ "id": { "eq": label_id } }),
+        );
+    }
+
+    // Add priority filter if specified
+    if let Some(priority) = &options.priority {
+        filter.insert(
+            "priority".to_string(),
+            serde_json::json!({ "eq": priority.to_value() }),
         );
     }
 
@@ -3228,6 +3280,178 @@ mod tests {
             sort_by: Some(IssueSortField::Priority),
             sort_order: Some(SortOrder::Asc),
             ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    // =============================================================================
+    // PriorityFilter tests
+    // =============================================================================
+
+    #[test]
+    fn test_priority_filter_parse_numeric() {
+        assert_eq!(PriorityFilter::parse("0"), Some(PriorityFilter::None));
+        assert_eq!(PriorityFilter::parse("1"), Some(PriorityFilter::Urgent));
+        assert_eq!(PriorityFilter::parse("2"), Some(PriorityFilter::High));
+        assert_eq!(PriorityFilter::parse("3"), Some(PriorityFilter::Normal));
+        assert_eq!(PriorityFilter::parse("4"), Some(PriorityFilter::Low));
+    }
+
+    #[test]
+    fn test_priority_filter_parse_named() {
+        assert_eq!(PriorityFilter::parse("none"), Some(PriorityFilter::None));
+        assert_eq!(
+            PriorityFilter::parse("urgent"),
+            Some(PriorityFilter::Urgent)
+        );
+        assert_eq!(PriorityFilter::parse("high"), Some(PriorityFilter::High));
+        assert_eq!(
+            PriorityFilter::parse("normal"),
+            Some(PriorityFilter::Normal)
+        );
+        assert_eq!(
+            PriorityFilter::parse("medium"),
+            Some(PriorityFilter::Normal)
+        );
+        assert_eq!(PriorityFilter::parse("low"), Some(PriorityFilter::Low));
+    }
+
+    #[test]
+    fn test_priority_filter_parse_case_insensitive() {
+        assert_eq!(
+            PriorityFilter::parse("URGENT"),
+            Some(PriorityFilter::Urgent)
+        );
+        assert_eq!(PriorityFilter::parse("High"), Some(PriorityFilter::High));
+        assert_eq!(
+            PriorityFilter::parse("NORMAL"),
+            Some(PriorityFilter::Normal)
+        );
+        assert_eq!(PriorityFilter::parse("Low"), Some(PriorityFilter::Low));
+    }
+
+    #[test]
+    fn test_priority_filter_parse_invalid() {
+        assert_eq!(PriorityFilter::parse("5"), None);
+        assert_eq!(PriorityFilter::parse("-1"), None);
+        assert_eq!(PriorityFilter::parse("critical"), None);
+        assert_eq!(PriorityFilter::parse(""), None);
+        assert_eq!(PriorityFilter::parse("very high"), None);
+    }
+
+    #[test]
+    fn test_priority_filter_to_value() {
+        assert_eq!(PriorityFilter::None.to_value(), 0);
+        assert_eq!(PriorityFilter::Urgent.to_value(), 1);
+        assert_eq!(PriorityFilter::High.to_value(), 2);
+        assert_eq!(PriorityFilter::Normal.to_value(), 3);
+        assert_eq!(PriorityFilter::Low.to_value(), 4);
+    }
+
+    #[test]
+    fn test_list_issues_with_priority_filter() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            priority: Some(PriorityFilter::Urgent),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_combined_filters() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        // Combine multiple filters: team + assignee + priority + state
+        let options = IssueListOptions {
+            team: Some("ENG".to_string()),
+            assignee: Some("user-123".to_string()),
+            state: Some("In Progress".to_string()),
+            priority: Some(PriorityFilter::High),
+            limit: Some(10),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_all_filters_including_priority() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        // Combine all available filters
+        let options = IssueListOptions {
+            team: Some("ENG".to_string()),
+            assignee: Some("user-123".to_string()),
+            state: Some("In Progress".to_string()),
+            project: Some("project-456".to_string()),
+            cycle: Some("cycle-789".to_string()),
+            label: Some("label-abc".to_string()),
+            priority: Some(PriorityFilter::Urgent),
+            limit: Some(25),
+            created_after: Some("2024-01-01".to_string()),
+            created_before: Some("2024-12-31".to_string()),
+            updated_after: Some("2024-06-01".to_string()),
+            updated_before: Some("2024-06-30".to_string()),
+            sort_by: Some(IssueSortField::Priority),
+            sort_order: Some(SortOrder::Asc),
         };
 
         let result = list_issues(&client, None, options, OutputFormat::Human);
