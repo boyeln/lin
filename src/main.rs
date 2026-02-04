@@ -132,7 +132,9 @@ enum IssueCommands {
     lin issue list --cycle <cycle-id>\n  \
     lin issue list --label <label-id>\n  \
     lin issue list --created-after 2024-01-01\n  \
-    lin issue list --updated-before 2024-12-31")]
+    lin issue list --updated-before 2024-12-31\n  \
+    lin issue list --sort priority --order asc\n  \
+    lin issue list --sort updated --order desc")]
     List {
         /// Filter by team identifier
         #[arg(long)]
@@ -167,6 +169,12 @@ enum IssueCommands {
         /// Filter issues updated before this date (YYYY-MM-DD)
         #[arg(long)]
         updated_before: Option<String>,
+        /// Sort by field (priority, created, updated, title)
+        #[arg(long)]
+        sort: Option<String>,
+        /// Sort direction (asc, desc). Uses field-appropriate default if not specified
+        #[arg(long)]
+        order: Option<String>,
     },
     /// Get details of a specific issue
     #[command(after_help = "EXAMPLES:\n  \
@@ -615,12 +623,40 @@ fn handle_issue_command(
             created_before,
             updated_after,
             updated_before,
+            sort,
+            order,
         } => {
             // If assignee is "me", we need to fetch the viewer ID first
             let viewer_id = if assignee.as_deref() == Some("me") {
                 let response: lin::models::ViewerResponse =
                     client.query(lin::api::queries::VIEWER_QUERY, serde_json::json!({}))?;
                 Some(response.viewer.id)
+            } else {
+                None
+            };
+
+            // Parse sort field if provided
+            let sort_by = if let Some(sort_str) = &sort {
+                let field = issue::IssueSortField::parse(sort_str).ok_or_else(|| {
+                    lin::error::LinError::config(format!(
+                        "Invalid sort field '{}'. Valid fields: priority, created, updated, title",
+                        sort_str
+                    ))
+                })?;
+                Some(field)
+            } else {
+                None
+            };
+
+            // Parse sort order if provided
+            let sort_order = if let Some(order_str) = &order {
+                let ord = issue::SortOrder::parse(order_str).ok_or_else(|| {
+                    lin::error::LinError::config(format!(
+                        "Invalid sort order '{}'. Valid orders: asc, desc",
+                        order_str
+                    ))
+                })?;
+                Some(ord)
             } else {
                 None
             };
@@ -637,6 +673,8 @@ fn handle_issue_command(
                 created_before,
                 updated_after,
                 updated_before,
+                sort_by,
+                sort_order,
             };
             issue::list_issues(&client, viewer_id.as_deref(), options, format)
         }

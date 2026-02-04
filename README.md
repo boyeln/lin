@@ -127,6 +127,22 @@ lin issue list --updated-before 2024-06-30
 lin issue list --team ENG --created-after 2024-01-01 --created-before 2024-06-30
 lin issue list --assignee me --updated-after 2024-01-01
 
+# Sort issues by field (priority, created, updated, title)
+lin issue list --sort priority
+lin issue list --sort created
+lin issue list --sort updated
+lin issue list --sort title
+
+# Sort with explicit direction (asc or desc)
+lin issue list --sort priority --order asc    # Urgent issues first
+lin issue list --sort priority --order desc   # Low priority issues first
+lin issue list --sort created --order desc    # Newest issues first (default)
+lin issue list --sort updated --order asc     # Oldest updated first
+
+# Combine sorting with filters
+lin issue list --team ENG --sort priority --order asc
+lin issue list --assignee me --sort updated --order desc
+
 # Create an issue with labels
 lin issue create --team <team-id> --title "New feature" --labels <label-id1> --labels <label-id2>
 
@@ -230,7 +246,7 @@ lin issue remove-relation <relation-id>
 | Issue relations | ✅ | Parent/child, blocks/blocked by, relates to, duplicate |
 | **Advanced Filtering** | | |
 | Date range filters | ✅ | Filter by created/updated date ranges |
-| Sort options | ❌ | Sort by priority, updated date, created date |
+| Sort options | ✅ | Sort by priority, created, updated, or title with asc/desc order |
 | Combined filters | ❌ | Complex filter combinations |
 | **CLI Experience** | | |
 | Shell completions | ❌ | Bash, zsh, fish completions |

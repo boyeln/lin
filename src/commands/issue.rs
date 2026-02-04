@@ -13,6 +13,73 @@ use crate::output::{output, HumanDisplay, OutputFormat};
 use crate::Result;
 use serde::Serialize;
 
+/// Sort field for issue list.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum IssueSortField {
+    /// Sort by priority (default: ascending - urgent first).
+    Priority,
+    /// Sort by creation date (default: descending - newest first).
+    #[default]
+    Created,
+    /// Sort by last update date (default: descending - most recent first).
+    Updated,
+    /// Sort by title (default: ascending - alphabetical).
+    Title,
+}
+
+impl IssueSortField {
+    /// Parse a sort field from a string.
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "priority" => Some(Self::Priority),
+            "created" => Some(Self::Created),
+            "updated" => Some(Self::Updated),
+            "title" => Some(Self::Title),
+            _ => None,
+        }
+    }
+
+    /// Get the GraphQL field name for this sort field.
+    pub fn to_graphql_field(&self) -> &'static str {
+        match self {
+            Self::Priority => "priority",
+            Self::Created => "createdAt",
+            Self::Updated => "updatedAt",
+            Self::Title => "title",
+        }
+    }
+
+    /// Get the default sort order for this field.
+    pub fn default_order(&self) -> SortOrder {
+        match self {
+            Self::Priority => SortOrder::Asc,
+            Self::Created => SortOrder::Desc,
+            Self::Updated => SortOrder::Desc,
+            Self::Title => SortOrder::Asc,
+        }
+    }
+}
+
+/// Sort order direction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SortOrder {
+    /// Ascending order.
+    Asc,
+    /// Descending order.
+    Desc,
+}
+
+impl SortOrder {
+    /// Parse a sort order from a string.
+    pub fn parse(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "asc" => Some(Self::Asc),
+            "desc" => Some(Self::Desc),
+            _ => None,
+        }
+    }
+}
+
 /// Options for listing issues.
 #[derive(Debug, Clone, Default)]
 pub struct IssueListOptions {
@@ -38,6 +105,10 @@ pub struct IssueListOptions {
     pub updated_after: Option<String>,
     /// Filter issues updated before this date (YYYY-MM-DD format).
     pub updated_before: Option<String>,
+    /// Sort field (priority, created, updated, title).
+    pub sort_by: Option<IssueSortField>,
+    /// Sort direction (asc, desc). Uses field-specific default if not specified.
+    pub sort_order: Option<SortOrder>,
 }
 
 /// Options for creating a new issue.
@@ -330,10 +401,29 @@ pub fn list_issues(
         variables.insert("filter".to_string(), serde_json::Value::Object(filter));
     }
 
+    // Add sorting if specified
+    if let Some(sort_field) = &options.sort_by {
+        variables.insert(
+            "orderBy".to_string(),
+            serde_json::json!(sort_field.to_graphql_field()),
+        );
+    }
+
     let response: IssuesResponse =
         client.query(queries::ISSUES_QUERY, serde_json::Value::Object(variables))?;
 
-    output(&response.issues.nodes, format);
+    // If we have a sort order that differs from the default, we need to reverse the results
+    // because Linear's API doesn't support explicit sort direction via GraphQL
+    let mut issues = response.issues.nodes;
+    if let Some(sort_field) = &options.sort_by {
+        let default_order = sort_field.default_order();
+        let requested_order = options.sort_order.unwrap_or(default_order);
+        if requested_order != default_order {
+            issues.reverse();
+        }
+    }
+
+    output(&issues, format);
     Ok(())
 }
 
@@ -2794,6 +2884,349 @@ mod tests {
             created_after: Some("2024-01-01".to_string()),
             updated_before: Some("2024-12-31".to_string()),
             limit: Some(25),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    // =============================================================================
+    // IssueSortField tests
+    // =============================================================================
+
+    #[test]
+    fn test_issue_sort_field_parse() {
+        assert_eq!(
+            IssueSortField::parse("priority"),
+            Some(IssueSortField::Priority)
+        );
+        assert_eq!(
+            IssueSortField::parse("created"),
+            Some(IssueSortField::Created)
+        );
+        assert_eq!(
+            IssueSortField::parse("updated"),
+            Some(IssueSortField::Updated)
+        );
+        assert_eq!(IssueSortField::parse("title"), Some(IssueSortField::Title));
+        // Case insensitive
+        assert_eq!(
+            IssueSortField::parse("PRIORITY"),
+            Some(IssueSortField::Priority)
+        );
+        assert_eq!(
+            IssueSortField::parse("Created"),
+            Some(IssueSortField::Created)
+        );
+        // Invalid values
+        assert_eq!(IssueSortField::parse("invalid"), None);
+        assert_eq!(IssueSortField::parse(""), None);
+    }
+
+    #[test]
+    fn test_issue_sort_field_to_graphql_field() {
+        assert_eq!(IssueSortField::Priority.to_graphql_field(), "priority");
+        assert_eq!(IssueSortField::Created.to_graphql_field(), "createdAt");
+        assert_eq!(IssueSortField::Updated.to_graphql_field(), "updatedAt");
+        assert_eq!(IssueSortField::Title.to_graphql_field(), "title");
+    }
+
+    #[test]
+    fn test_issue_sort_field_default_order() {
+        assert_eq!(IssueSortField::Priority.default_order(), SortOrder::Asc);
+        assert_eq!(IssueSortField::Created.default_order(), SortOrder::Desc);
+        assert_eq!(IssueSortField::Updated.default_order(), SortOrder::Desc);
+        assert_eq!(IssueSortField::Title.default_order(), SortOrder::Asc);
+    }
+
+    // =============================================================================
+    // SortOrder tests
+    // =============================================================================
+
+    #[test]
+    fn test_sort_order_parse() {
+        assert_eq!(SortOrder::parse("asc"), Some(SortOrder::Asc));
+        assert_eq!(SortOrder::parse("desc"), Some(SortOrder::Desc));
+        // Case insensitive
+        assert_eq!(SortOrder::parse("ASC"), Some(SortOrder::Asc));
+        assert_eq!(SortOrder::parse("DESC"), Some(SortOrder::Desc));
+        assert_eq!(SortOrder::parse("Asc"), Some(SortOrder::Asc));
+        // Invalid values
+        assert_eq!(SortOrder::parse("invalid"), None);
+        assert_eq!(SortOrder::parse(""), None);
+        assert_eq!(SortOrder::parse("ascending"), None);
+    }
+
+    // =============================================================================
+    // list_issues with sort tests
+    // =============================================================================
+
+    #[test]
+    fn test_list_issues_with_sort_by_priority() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            sort_by: Some(IssueSortField::Priority),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_sort_by_created() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            sort_by: Some(IssueSortField::Created),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_sort_by_updated() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            sort_by: Some(IssueSortField::Updated),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_sort_by_title() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            sort_by: Some(IssueSortField::Title),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_sort_and_order_asc() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            sort_by: Some(IssueSortField::Priority),
+            sort_order: Some(SortOrder::Asc),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_sort_and_order_desc() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            sort_by: Some(IssueSortField::Created),
+            sort_order: Some(SortOrder::Desc),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_sort_and_filters() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            team: Some("ENG".to_string()),
+            state: Some("In Progress".to_string()),
+            sort_by: Some(IssueSortField::Updated),
+            sort_order: Some(SortOrder::Desc),
+            limit: Some(25),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_sort_returns_issues() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r##"{
+                    "data": {
+                        "issues": {
+                            "nodes": [
+                                {
+                                    "id": "issue-1",
+                                    "identifier": "ENG-1",
+                                    "title": "First issue",
+                                    "description": null,
+                                    "priority": 1,
+                                    "state": null,
+                                    "team": null,
+                                    "assignee": null,
+                                    "createdAt": "2024-01-01T00:00:00.000Z",
+                                    "updatedAt": "2024-01-01T00:00:00.000Z"
+                                },
+                                {
+                                    "id": "issue-2",
+                                    "identifier": "ENG-2",
+                                    "title": "Second issue",
+                                    "description": null,
+                                    "priority": 2,
+                                    "state": null,
+                                    "team": null,
+                                    "assignee": null,
+                                    "createdAt": "2024-01-02T00:00:00.000Z",
+                                    "updatedAt": "2024-01-02T00:00:00.000Z"
+                                }
+                            ]
+                        }
+                    }
+                }"##,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            sort_by: Some(IssueSortField::Priority),
+            sort_order: Some(SortOrder::Asc),
             ..Default::default()
         };
 
