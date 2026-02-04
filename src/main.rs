@@ -95,19 +95,25 @@ enum IssueCommands {
         /// Issue title
         #[arg(long)]
         title: String,
-        /// Team identifier
+        /// Team ID (UUID of the team)
         #[arg(long)]
         team: String,
         /// Issue description (optional)
         #[arg(long)]
         description: Option<String>,
-        /// Priority (0-4, where 0 is no priority)
+        /// Assignee user ID (optional)
+        #[arg(long)]
+        assignee: Option<String>,
+        /// Initial state ID (optional)
+        #[arg(long)]
+        state: Option<String>,
+        /// Priority (0-4: 0=none, 1=urgent, 2=high, 3=normal, 4=low)
         #[arg(long)]
         priority: Option<u8>,
     },
     /// Update an existing issue
     Update {
-        /// Issue identifier (e.g., "ENG-123")
+        /// Issue identifier (e.g., "ENG-123") or UUID
         identifier: String,
         /// New title
         #[arg(long)]
@@ -115,10 +121,13 @@ enum IssueCommands {
         /// New description
         #[arg(long)]
         description: Option<String>,
-        /// New state name
+        /// Assignee user ID
+        #[arg(long)]
+        assignee: Option<String>,
+        /// New state ID
         #[arg(long)]
         state: Option<String>,
-        /// New priority (0-4)
+        /// New priority (0-4: 0=none, 1=urgent, 2=high, 3=normal, 4=low)
         #[arg(long)]
         priority: Option<u8>,
     },
@@ -235,21 +244,40 @@ fn handle_issue_command(command: IssueCommands, token: &str) -> lin::Result<()> 
             issue::list_issues(&client, viewer_id.as_deref(), options)
         }
         IssueCommands::Get { identifier } => issue::get_issue(&client, &identifier),
-        IssueCommands::Create { .. } => {
-            let response = PlaceholderResponse {
-                message: "Command not yet implemented",
-                command: "issue create".into(),
+        IssueCommands::Create {
+            title,
+            team,
+            description,
+            assignee,
+            state,
+            priority,
+        } => {
+            let options = issue::IssueCreateOptions {
+                title,
+                team_id: team,
+                description,
+                assignee_id: assignee,
+                state_id: state,
+                priority: priority.map(|p| p as i32),
             };
-            output_success(&response);
-            Ok(())
+            issue::create_issue(&client, options)
         }
-        IssueCommands::Update { identifier, .. } => {
-            let response = PlaceholderResponse {
-                message: "Command not yet implemented",
-                command: format!("issue update {}", identifier),
+        IssueCommands::Update {
+            identifier,
+            title,
+            description,
+            assignee,
+            state,
+            priority,
+        } => {
+            let options = issue::IssueUpdateOptions {
+                title,
+                description,
+                assignee_id: assignee,
+                state_id: state,
+                priority: priority.map(|p| p as i32),
             };
-            output_success(&response);
-            Ok(())
+            issue::update_issue(&client, &identifier, options)
         }
     }
 }

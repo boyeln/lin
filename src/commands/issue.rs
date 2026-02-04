@@ -4,7 +4,7 @@
 
 use crate::api::{queries, GraphQLClient};
 use crate::error::LinError;
-use crate::models::{IssueResponse, IssuesResponse};
+use crate::models::{IssueCreateResponse, IssueResponse, IssueUpdateResponse, IssuesResponse};
 use crate::output::output_success;
 use crate::Result;
 
@@ -19,6 +19,38 @@ pub struct IssueListOptions {
     pub state: Option<String>,
     /// Maximum number of issues to return (default 50).
     pub limit: Option<i32>,
+}
+
+/// Options for creating a new issue.
+#[derive(Debug, Clone)]
+pub struct IssueCreateOptions {
+    /// Issue title (required).
+    pub title: String,
+    /// Team ID (required).
+    pub team_id: String,
+    /// Issue description.
+    pub description: Option<String>,
+    /// Assignee user ID.
+    pub assignee_id: Option<String>,
+    /// Initial workflow state ID.
+    pub state_id: Option<String>,
+    /// Priority level (0=none, 1=urgent, 2=high, 3=normal, 4=low).
+    pub priority: Option<i32>,
+}
+
+/// Options for updating an existing issue.
+#[derive(Debug, Clone, Default)]
+pub struct IssueUpdateOptions {
+    /// New title.
+    pub title: Option<String>,
+    /// New description.
+    pub description: Option<String>,
+    /// New assignee user ID.
+    pub assignee_id: Option<String>,
+    /// New workflow state ID.
+    pub state_id: Option<String>,
+    /// New priority level (0=none, 1=urgent, 2=high, 3=normal, 4=low).
+    pub priority: Option<i32>,
 }
 
 /// Check if a string looks like a UUID.
@@ -286,6 +318,175 @@ pub fn get_issue(client: &GraphQLClient, id_or_identifier: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+/// Create a new issue in Linear.
+///
+/// Creates an issue with the specified options and outputs the created issue as JSON.
+///
+/// # Arguments
+///
+/// * `client` - The GraphQL client to use for the API request
+/// * `options` - Options for the new issue (title and team_id are required)
+///
+/// # Example
+///
+/// ```ignore
+/// use lin::api::GraphQLClient;
+/// use lin::commands::issue::{create_issue, IssueCreateOptions};
+///
+/// let client = GraphQLClient::new("lin_api_xxxxx");
+/// let options = IssueCreateOptions {
+///     title: "Fix the bug".to_string(),
+///     team_id: "team-123".to_string(),
+///     description: Some("Detailed description".to_string()),
+///     assignee_id: None,
+///     state_id: None,
+///     priority: Some(2), // High priority
+/// };
+/// create_issue(&client, options)?;
+/// ```
+pub fn create_issue(client: &GraphQLClient, options: IssueCreateOptions) -> Result<()> {
+    // Build the input object for the mutation
+    let mut input = serde_json::Map::new();
+    input.insert("title".to_string(), serde_json::json!(options.title));
+    input.insert("teamId".to_string(), serde_json::json!(options.team_id));
+
+    if let Some(description) = options.description {
+        input.insert("description".to_string(), serde_json::json!(description));
+    }
+
+    if let Some(assignee_id) = options.assignee_id {
+        input.insert("assigneeId".to_string(), serde_json::json!(assignee_id));
+    }
+
+    if let Some(state_id) = options.state_id {
+        input.insert("stateId".to_string(), serde_json::json!(state_id));
+    }
+
+    if let Some(priority) = options.priority {
+        input.insert("priority".to_string(), serde_json::json!(priority));
+    }
+
+    let variables = serde_json::json!({
+        "input": input
+    });
+
+    let response: IssueCreateResponse =
+        client.query(queries::ISSUE_CREATE_MUTATION, variables)?;
+
+    if !response.issue_create.success {
+        return Err(LinError::api("Failed to create issue"));
+    }
+
+    match response.issue_create.issue {
+        Some(issue) => {
+            output_success(&issue);
+            Ok(())
+        }
+        None => Err(LinError::api("Issue creation succeeded but no issue returned")),
+    }
+}
+
+/// Update an existing issue in Linear.
+///
+/// Updates an issue identified by ID or identifier (e.g., "ENG-123") and outputs
+/// the updated issue as JSON.
+///
+/// # Arguments
+///
+/// * `client` - The GraphQL client to use for the API request
+/// * `id_or_identifier` - The issue's UUID or human-readable identifier
+/// * `options` - Fields to update (all optional)
+///
+/// # Example
+///
+/// ```ignore
+/// use lin::api::GraphQLClient;
+/// use lin::commands::issue::{update_issue, IssueUpdateOptions};
+///
+/// let client = GraphQLClient::new("lin_api_xxxxx");
+/// let options = IssueUpdateOptions {
+///     title: Some("New title".to_string()),
+///     priority: Some(1), // Urgent
+///     ..Default::default()
+/// };
+/// update_issue(&client, "ENG-123", options)?;
+/// ```
+pub fn update_issue(
+    client: &GraphQLClient,
+    id_or_identifier: &str,
+    options: IssueUpdateOptions,
+) -> Result<()> {
+    // First, resolve the issue ID if given an identifier
+    let issue_id = if is_uuid(id_or_identifier) {
+        id_or_identifier.to_string()
+    } else {
+        // Parse the identifier and look up the issue to get its UUID
+        let (team_key, number) = parse_identifier(id_or_identifier)?;
+
+        let lookup_variables = serde_json::json!({
+            "filter": {
+                "team": { "key": { "eq": team_key } },
+                "number": { "eq": number }
+            }
+        });
+
+        let lookup_response: IssuesResponse =
+            client.query(queries::ISSUE_BY_IDENTIFIER_QUERY, lookup_variables)?;
+
+        if lookup_response.issues.nodes.is_empty() {
+            return Err(LinError::api(format!(
+                "Issue '{}' not found",
+                id_or_identifier
+            )));
+        }
+
+        lookup_response.issues.nodes[0].id.clone()
+    };
+
+    // Build the input object for the mutation
+    let mut input = serde_json::Map::new();
+
+    if let Some(title) = options.title {
+        input.insert("title".to_string(), serde_json::json!(title));
+    }
+
+    if let Some(description) = options.description {
+        input.insert("description".to_string(), serde_json::json!(description));
+    }
+
+    if let Some(assignee_id) = options.assignee_id {
+        input.insert("assigneeId".to_string(), serde_json::json!(assignee_id));
+    }
+
+    if let Some(state_id) = options.state_id {
+        input.insert("stateId".to_string(), serde_json::json!(state_id));
+    }
+
+    if let Some(priority) = options.priority {
+        input.insert("priority".to_string(), serde_json::json!(priority));
+    }
+
+    let variables = serde_json::json!({
+        "id": issue_id,
+        "input": input
+    });
+
+    let response: IssueUpdateResponse =
+        client.query(queries::ISSUE_UPDATE_MUTATION, variables)?;
+
+    if !response.issue_update.success {
+        return Err(LinError::api("Failed to update issue"));
+    }
+
+    match response.issue_update.issue {
+        Some(issue) => {
+            output_success(&issue);
+            Ok(())
+        }
+        None => Err(LinError::api("Issue update succeeded but no issue returned")),
+    }
 }
 
 #[cfg(test)]
@@ -984,6 +1185,495 @@ mod tests {
         let result = get_issue(&client, "550e8400e29b41d4a716446655440000");
 
         assert!(result.is_ok());
+        mock.assert();
+    }
+
+    // =============================================================================
+    // create_issue tests
+    // =============================================================================
+
+    #[test]
+    fn test_create_issue_minimal_options() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r##"{
+                    "data": {
+                        "issueCreate": {
+                            "success": true,
+                            "issue": {
+                                "id": "issue-new",
+                                "identifier": "ENG-999",
+                                "title": "New Issue",
+                                "description": null,
+                                "priority": 0,
+                                "state": null,
+                                "team": {
+                                    "id": "team-1",
+                                    "key": "ENG",
+                                    "name": "Engineering",
+                                    "description": null
+                                },
+                                "assignee": null,
+                                "createdAt": "2024-01-01T00:00:00.000Z",
+                                "updatedAt": "2024-01-01T00:00:00.000Z"
+                            }
+                        }
+                    }
+                }"##,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueCreateOptions {
+            title: "New Issue".to_string(),
+            team_id: "team-1".to_string(),
+            description: None,
+            assignee_id: None,
+            state_id: None,
+            priority: None,
+        };
+
+        let result = create_issue(&client, options);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_create_issue_all_options() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r##"{
+                    "data": {
+                        "issueCreate": {
+                            "success": true,
+                            "issue": {
+                                "id": "issue-full",
+                                "identifier": "ENG-1000",
+                                "title": "Full Issue",
+                                "description": "Detailed description",
+                                "priority": 2,
+                                "state": {
+                                    "id": "state-1",
+                                    "name": "In Progress",
+                                    "color": "#0066ff",
+                                    "type": "started"
+                                },
+                                "team": {
+                                    "id": "team-1",
+                                    "key": "ENG",
+                                    "name": "Engineering",
+                                    "description": null
+                                },
+                                "assignee": {
+                                    "id": "user-1",
+                                    "name": "John Doe",
+                                    "email": "john@example.com",
+                                    "displayName": "JD",
+                                    "active": true
+                                },
+                                "createdAt": "2024-01-01T00:00:00.000Z",
+                                "updatedAt": "2024-01-01T00:00:00.000Z"
+                            }
+                        }
+                    }
+                }"##,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueCreateOptions {
+            title: "Full Issue".to_string(),
+            team_id: "team-1".to_string(),
+            description: Some("Detailed description".to_string()),
+            assignee_id: Some("user-1".to_string()),
+            state_id: Some("state-1".to_string()),
+            priority: Some(2),
+        };
+
+        let result = create_issue(&client, options);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_create_issue_failure() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issueCreate": {
+                            "success": false,
+                            "issue": null
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueCreateOptions {
+            title: "Bad Issue".to_string(),
+            team_id: "invalid-team".to_string(),
+            description: None,
+            assignee_id: None,
+            state_id: None,
+            priority: None,
+        };
+
+        let result = create_issue(&client, options);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Failed to create issue"));
+        mock.assert();
+    }
+
+    #[test]
+    fn test_create_issue_api_error() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": null,
+                    "errors": [
+                        {
+                            "message": "Not authenticated"
+                        }
+                    ]
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("invalid-token", &server.url());
+        let options = IssueCreateOptions {
+            title: "Test".to_string(),
+            team_id: "team-1".to_string(),
+            description: None,
+            assignee_id: None,
+            state_id: None,
+            priority: None,
+        };
+
+        let result = create_issue(&client, options);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Not authenticated"));
+        mock.assert();
+    }
+
+    // =============================================================================
+    // update_issue tests
+    // =============================================================================
+
+    #[test]
+    fn test_update_issue_by_uuid() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r##"{
+                    "data": {
+                        "issueUpdate": {
+                            "success": true,
+                            "issue": {
+                                "id": "550e8400-e29b-41d4-a716-446655440000",
+                                "identifier": "ENG-123",
+                                "title": "Updated Title",
+                                "description": "Updated description",
+                                "priority": 1,
+                                "state": {
+                                    "id": "state-2",
+                                    "name": "Done",
+                                    "color": "#00ff00",
+                                    "type": "completed"
+                                },
+                                "team": {
+                                    "id": "team-1",
+                                    "key": "ENG",
+                                    "name": "Engineering",
+                                    "description": null
+                                },
+                                "assignee": null,
+                                "createdAt": "2024-01-01T00:00:00.000Z",
+                                "updatedAt": "2024-01-02T00:00:00.000Z"
+                            }
+                        }
+                    }
+                }"##,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueUpdateOptions {
+            title: Some("Updated Title".to_string()),
+            description: Some("Updated description".to_string()),
+            assignee_id: None,
+            state_id: Some("state-2".to_string()),
+            priority: Some(1),
+        };
+
+        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_update_issue_by_identifier() {
+        let mut server = mockito::Server::new();
+
+        // First mock: lookup by identifier
+        let lookup_mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r##"{
+                    "data": {
+                        "issues": {
+                            "nodes": [
+                                {
+                                    "id": "issue-uuid-123",
+                                    "identifier": "ENG-123",
+                                    "title": "Original Title",
+                                    "description": null,
+                                    "priority": 0,
+                                    "state": null,
+                                    "team": null,
+                                    "assignee": null,
+                                    "createdAt": "2024-01-01T00:00:00.000Z",
+                                    "updatedAt": "2024-01-01T00:00:00.000Z"
+                                }
+                            ]
+                        }
+                    }
+                }"##,
+            )
+            .create();
+
+        // Second mock: update mutation
+        let update_mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r##"{
+                    "data": {
+                        "issueUpdate": {
+                            "success": true,
+                            "issue": {
+                                "id": "issue-uuid-123",
+                                "identifier": "ENG-123",
+                                "title": "New Title",
+                                "description": null,
+                                "priority": 0,
+                                "state": null,
+                                "team": null,
+                                "assignee": null,
+                                "createdAt": "2024-01-01T00:00:00.000Z",
+                                "updatedAt": "2024-01-02T00:00:00.000Z"
+                            }
+                        }
+                    }
+                }"##,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueUpdateOptions {
+            title: Some("New Title".to_string()),
+            ..Default::default()
+        };
+
+        let result = update_issue(&client, "ENG-123", options);
+        assert!(result.is_ok());
+        lookup_mock.assert();
+        update_mock.assert();
+    }
+
+    #[test]
+    fn test_update_issue_not_found() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueUpdateOptions {
+            title: Some("New Title".to_string()),
+            ..Default::default()
+        };
+
+        let result = update_issue(&client, "ENG-99999", options);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("not found"));
+        mock.assert();
+    }
+
+    #[test]
+    fn test_update_issue_invalid_identifier() {
+        let server = mockito::Server::new();
+        let client = GraphQLClient::with_url("test-token", &server.url());
+
+        let options = IssueUpdateOptions {
+            title: Some("New Title".to_string()),
+            ..Default::default()
+        };
+
+        let result = update_issue(&client, "invalid-identifier", options);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Invalid team key"));
+    }
+
+    #[test]
+    fn test_update_issue_failure() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issueUpdate": {
+                            "success": false,
+                            "issue": null
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueUpdateOptions {
+            title: Some("New Title".to_string()),
+            ..Default::default()
+        };
+
+        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Failed to update issue"));
+        mock.assert();
+    }
+
+    #[test]
+    fn test_update_issue_partial_update() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r##"{
+                    "data": {
+                        "issueUpdate": {
+                            "success": true,
+                            "issue": {
+                                "id": "550e8400-e29b-41d4-a716-446655440000",
+                                "identifier": "ENG-123",
+                                "title": "Original Title",
+                                "description": null,
+                                "priority": 3,
+                                "state": null,
+                                "team": null,
+                                "assignee": null,
+                                "createdAt": "2024-01-01T00:00:00.000Z",
+                                "updatedAt": "2024-01-02T00:00:00.000Z"
+                            }
+                        }
+                    }
+                }"##,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        // Only update priority
+        let options = IssueUpdateOptions {
+            title: None,
+            description: None,
+            assignee_id: None,
+            state_id: None,
+            priority: Some(3),
+        };
+
+        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_update_issue_api_error() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": null,
+                    "errors": [
+                        {
+                            "message": "Not authenticated"
+                        }
+                    ]
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("invalid-token", &server.url());
+        let options = IssueUpdateOptions {
+            title: Some("New Title".to_string()),
+            ..Default::default()
+        };
+
+        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Not authenticated"));
         mock.assert();
     }
 }
