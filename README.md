@@ -70,6 +70,10 @@ lin user me
 # List all users
 lin user list
 
+# List workflow states for a team
+lin workflow list --team <team-id>
+lin workflow list --team ENG
+
 # Manage organizations
 lin org list
 lin org add <name>
@@ -102,7 +106,7 @@ lin org set-default <name>
 | Projects | ❌ | List and filter by projects |
 | Cycles/Sprints | ❌ | View and manage cycles |
 | Labels | ❌ | Manage issue labels |
-| Workflow states | ❌ | List workflow states for a team |
+| Workflow states | ✅ | List workflow states for a team |
 | Documents | ❌ | Create/manage documents |
 | File uploads | ❌ | Upload attachments |
 | Templates | ❌ | Bulk create issues from templates |

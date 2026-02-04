@@ -85,6 +85,14 @@ pub struct Issue {
 // Connection Types (for paginated results)
 // =============================================================================
 
+/// A paginated list of workflow states.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkflowStateConnection {
+    /// List of workflow states.
+    pub nodes: Vec<WorkflowState>,
+}
+
 /// A paginated list of issues.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -151,6 +159,24 @@ pub struct UsersResponse {
 pub struct IssuesResponse {
     /// Paginated list of issues.
     pub issues: IssueConnection,
+}
+
+/// Team with workflow states for the workflow states query.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TeamWithWorkflowStates {
+    /// Unique identifier for the team.
+    pub id: String,
+    /// The team's workflow states.
+    pub states: WorkflowStateConnection,
+}
+
+/// Response wrapper for the workflow states query.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkflowStatesResponse {
+    /// The team with its workflow states.
+    pub team: TeamWithWorkflowStates,
 }
 
 /// Response wrapper for a single issue query.

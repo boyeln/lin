@@ -5,7 +5,7 @@
 use clap::{Parser, Subcommand};
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
-use lin::commands::{issue, org, team, user};
+use lin::commands::{issue, org, team, user, workflow};
 use lin::config::Config;
 use lin::output::{output_error_with_format, output_success, OutputFormat};
 use serde::Serialize;
@@ -59,6 +59,11 @@ enum Commands {
     Org {
         #[command(subcommand)]
         command: OrgCommands,
+    },
+    /// Manage workflow states
+    Workflow {
+        #[command(subcommand)]
+        command: WorkflowCommands,
     },
 }
 
@@ -154,6 +159,20 @@ enum TeamCommands {
     },
 }
 
+/// Workflow state-related subcommands.
+#[derive(Subcommand, Debug)]
+enum WorkflowCommands {
+    /// List workflow states for a team
+    #[command(after_help = "EXAMPLES:\n  \
+    lin workflow list --team <team-id>\n  \
+    lin workflow list --team ENG")]
+    List {
+        /// Team ID (UUID) or team key (e.g., "ENG")
+        #[arg(long)]
+        team: String,
+    },
+}
+
 /// User-related subcommands.
 #[derive(Subcommand, Debug)]
 enum UserCommands {
@@ -230,6 +249,7 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
                 Commands::Issue { command } => handle_issue_command(command, &token, format),
                 Commands::Team { command } => handle_team_command(command, &token, format),
                 Commands::User { command } => handle_user_command(command, &token, format),
+                Commands::Workflow { command } => handle_workflow_command(command, &token, format),
                 Commands::Org { .. } => unreachable!(),
             }
         }
@@ -329,6 +349,18 @@ fn handle_user_command(
     match command {
         UserCommands::Me => user::me(&client, format),
         UserCommands::List => user::list_users(&client, format),
+    }
+}
+
+fn handle_workflow_command(
+    command: WorkflowCommands,
+    token: &str,
+    format: OutputFormat,
+) -> lin::Result<()> {
+    let client = GraphQLClient::new(token);
+
+    match command {
+        WorkflowCommands::List { team } => workflow::list_workflow_states(&client, &team, format),
     }
 }
 
