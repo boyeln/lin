@@ -109,7 +109,8 @@ lin org set-default <name>
 | Templates | ❌ | Bulk create issues from templates |
 | Git integration | ❌ | Link issues to branches |
 | Search | ❌ | Full-text search for issues |
-| Pretty output | ❌ | Human-readable colored output |
+| Human-friendly output | ✅ | Human-readable output (default) |
+| JSON output | ✅ | Machine-readable JSON output (--json flag) |
 
 ## Priority Values
 
@@ -125,17 +126,46 @@ When creating or updating issues, use these priority values:
 
 ## Output Format
 
-All commands output JSON for easy scripting and integration:
+By default, lin outputs human-friendly text:
 
 ```bash
+$ lin issue list
+ENG-123 Fix the authentication bug
+  Status: In Progress
+  Priority: High
+  Assignee: John Doe
+
+ENG-124 Update documentation
+  Status: Todo
+  Priority: Normal
+
+$ lin user me
+John Doe (JD)
+  john@example.com
+
+$ lin team list
+[ENG] Engineering
+  The engineering team
+
+[DES] Design
+```
+
+### JSON Output
+
+Use the `--json` flag for machine-readable JSON output, useful for scripting:
+
+```bash
+# Get JSON output
+lin issue list --json
+
 # Pipe to jq for processing
-lin issue list | jq '.[].identifier'
+lin issue list --json | jq '.data[].identifier'
 
 # Get just the issue title
-lin issue get ENG-123 | jq '.title'
+lin issue get ENG-123 --json | jq '.data.title'
 
 # Count issues
-lin issue list --team ENG | jq 'length'
+lin issue list --team ENG --json | jq '.data | length'
 ```
 
 ## License
