@@ -7,6 +7,7 @@ pub mod attachment;
 pub mod comment;
 pub mod cycle;
 pub mod document;
+pub mod git;
 pub mod issue;
 pub mod label;
 pub mod org;

@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
 use lin::commands::{
-    attachment, comment, cycle, document, issue, label, org, project, team, user, workflow,
+    attachment, comment, cycle, document, git, issue, label, org, project, team, user, workflow,
 };
 use lin::config::Config;
 use lin::output::{init_colors, output_error_with_format, output_success, OutputFormat};
@@ -215,6 +215,35 @@ enum IssueCommands {
     #[command(after_help = "EXAMPLES:\n  \
     lin issue unarchive ENG-123")]
     Unarchive {
+        /// Issue identifier (e.g., "ENG-123") or UUID
+        identifier: String,
+    },
+    /// Link a git branch to an issue
+    #[command(after_help = "EXAMPLES:\n  \
+    lin issue link-branch ENG-123 feature/my-feature\n  \
+    lin issue link-branch ENG-123 feature/my-feature --repo https://github.com/org/repo")]
+    LinkBranch {
+        /// Issue identifier (e.g., "ENG-123") or UUID
+        identifier: String,
+        /// Name of the branch to link
+        branch: String,
+        /// Repository URL (optional, for constructing the branch URL)
+        #[arg(long)]
+        repo: Option<String>,
+    },
+    /// Link a pull request URL to an issue
+    #[command(after_help = "EXAMPLES:\n  \
+    lin issue link-pr ENG-123 https://github.com/org/repo/pull/42")]
+    LinkPr {
+        /// Issue identifier (e.g., "ENG-123") or UUID
+        identifier: String,
+        /// Full URL of the pull request
+        url: String,
+    },
+    /// List linked branches and pull requests for an issue
+    #[command(after_help = "EXAMPLES:\n  \
+    lin issue links ENG-123")]
+    Links {
         /// Issue identifier (e.g., "ENG-123") or UUID
         identifier: String,
     },
@@ -580,6 +609,15 @@ fn handle_issue_command(
         IssueCommands::Unarchive { identifier } => {
             issue::unarchive_issue(&client, &identifier, format)
         }
+        IssueCommands::LinkBranch {
+            identifier,
+            branch,
+            repo,
+        } => git::link_branch(&client, &identifier, &branch, repo.as_deref(), format),
+        IssueCommands::LinkPr { identifier, url } => {
+            git::link_pr(&client, &identifier, &url, format)
+        }
+        IssueCommands::Links { identifier } => git::list_links(&client, &identifier, format),
     }
 }
 

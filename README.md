@@ -147,6 +147,16 @@ lin attachment upload --issue ENG-123 /path/to/file.png
 # Get details of a specific attachment (includes download URL)
 lin attachment get <attachment-id>
 
+# Link a git branch to an issue
+lin issue link-branch ENG-123 feature/my-feature
+lin issue link-branch ENG-123 feature/my-feature --repo https://github.com/org/repo
+
+# Link a pull request to an issue
+lin issue link-pr ENG-123 https://github.com/org/repo/pull/42
+
+# List linked branches and PRs for an issue
+lin issue links ENG-123
+
 # Manage organizations
 lin org list
 lin org add <name>
@@ -184,8 +194,8 @@ lin org set-default <name>
 | Workflow states | ✅ | List workflow states for a team |
 | Documents | ✅ | List, get, and create documents |
 | File uploads | ✅ | Upload attachments to issues, list and get attachment details |
+| Git integration | ✅ | Link branches and PRs to issues, list git links |
 | Templates | ❌ | Bulk create issues from templates |
-| Git integration | ❌ | Link issues to branches |
 | Search | ❌ | Full-text search for issues |
 | **Issue Relations** | | |
 | Issue relations | ❌ | Parent/child, blocks/blocked by, relates to |
