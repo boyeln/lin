@@ -4,6 +4,7 @@
 //! separated from the argument parsing in main.rs.
 
 pub mod attachment;
+pub mod cache;
 pub mod comment;
 pub mod completions;
 pub mod cycle;

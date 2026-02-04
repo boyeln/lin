@@ -9,6 +9,7 @@
 //! - Nested command structure (e.g., `lin issue list`)
 //! - Cross-platform support
 //! - Multi-organization support with configuration file
+//! - Response caching for faster repeated queries
 //!
 //! # Modules
 //!
@@ -19,9 +20,11 @@
 //! - [`commands`] - Command implementations
 //! - [`api`] - GraphQL client and queries for Linear API
 //! - [`models`] - Domain models for Linear entities
+//! - [`cache`] - Response caching for API queries
 
 pub mod api;
 pub mod auth;
+pub mod cache;
 pub mod commands;
 pub mod config;
 pub mod error;

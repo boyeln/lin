@@ -7,8 +7,8 @@ use clap_complete::Shell;
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
 use lin::commands::{
-    attachment, comment, completions, cycle, document, git, issue, label, org, project, relation,
-    search, team, user, workflow,
+    attachment, cache, comment, completions, cycle, document, git, issue, label, org, project,
+    relation, search, team, user, workflow,
 };
 use lin::config::Config;
 use lin::output::{init_colors, output_error_with_format, output_success, OutputFormat};
@@ -36,6 +36,10 @@ struct Cli {
     /// Output in JSON format (default: human-friendly output)
     #[arg(long, global = true)]
     json: bool,
+
+    /// Bypass the cache and fetch fresh data from the API
+    #[arg(long, global = true)]
+    no_cache: bool,
 
     #[command(subcommand)]
     command: Commands,
@@ -129,6 +133,14 @@ enum Commands {
         /// The shell to generate completions for
         #[arg(value_enum)]
         shell: Shell,
+    },
+    /// Manage the response cache
+    #[command(after_help = "EXAMPLES:\n  \
+    lin cache status\n  \
+    lin cache clear")]
+    Cache {
+        #[command(subcommand)]
+        command: CacheCommands,
     },
 }
 
@@ -566,6 +578,19 @@ enum OrgCommands {
     Info,
 }
 
+/// Cache-related subcommands.
+#[derive(Subcommand, Debug)]
+enum CacheCommands {
+    /// Show cache statistics (size, entries, etc.)
+    #[command(after_help = "EXAMPLES:\n  \
+    lin cache status")]
+    Status,
+    /// Clear all cached entries
+    #[command(after_help = "EXAMPLES:\n  \
+    lin cache clear")]
+    Clear,
+}
+
 /// Placeholder response for unimplemented commands.
 #[derive(Serialize)]
 struct PlaceholderResponse {
@@ -595,6 +620,8 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
             completions::generate_completions(*shell, &mut cmd);
             Ok(())
         }
+        // Cache command doesn't require an API token
+        Commands::Cache { command } => handle_cache_command(command, format),
         // All other commands require an API token
         _ => {
             let config = Config::load()?;
@@ -620,7 +647,9 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
                     state,
                     limit,
                 } => handle_search_command(&token, &query, team, assignee, state, limit, format),
-                Commands::Org { .. } | Commands::Completions { .. } => unreachable!(),
+                Commands::Org { .. } | Commands::Completions { .. } | Commands::Cache { .. } => {
+                    unreachable!()
+                }
             }
         }
     }
@@ -988,4 +1017,11 @@ fn handle_search_command(
     };
 
     search::search_issues(&client, query, viewer_id.as_deref(), options, format)
+}
+
+fn handle_cache_command(command: &CacheCommands, format: OutputFormat) -> lin::Result<()> {
+    match command {
+        CacheCommands::Status => cache::cache_status(format),
+        CacheCommands::Clear => cache::clear_cache(format),
+    }
 }
