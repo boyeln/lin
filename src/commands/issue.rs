@@ -287,7 +287,11 @@ pub fn list_issues(
 /// // By identifier
 /// get_issue(&client, "ENG-123", OutputFormat::Human)?;
 /// ```
-pub fn get_issue(client: &GraphQLClient, id_or_identifier: &str, format: OutputFormat) -> Result<()> {
+pub fn get_issue(
+    client: &GraphQLClient,
+    id_or_identifier: &str,
+    format: OutputFormat,
+) -> Result<()> {
     if is_uuid(id_or_identifier) {
         // Query by UUID
         let variables = serde_json::json!({
@@ -351,7 +355,11 @@ pub fn get_issue(client: &GraphQLClient, id_or_identifier: &str, format: OutputF
 /// };
 /// create_issue(&client, options, OutputFormat::Human)?;
 /// ```
-pub fn create_issue(client: &GraphQLClient, options: IssueCreateOptions, format: OutputFormat) -> Result<()> {
+pub fn create_issue(
+    client: &GraphQLClient,
+    options: IssueCreateOptions,
+    format: OutputFormat,
+) -> Result<()> {
     // Build the input object for the mutation
     let mut input = serde_json::Map::new();
     input.insert("title".to_string(), serde_json::json!(options.title));
@@ -992,7 +1000,11 @@ mod tests {
             .create();
 
         let client = GraphQLClient::with_url("test-token", &server.url());
-        let result = get_issue(&client, "550e8400-e29b-41d4-a716-446655440000", OutputFormat::Human);
+        let result = get_issue(
+            &client,
+            "550e8400-e29b-41d4-a716-446655440000",
+            OutputFormat::Human,
+        );
 
         assert!(result.is_ok());
         mock.assert();
@@ -1097,7 +1109,11 @@ mod tests {
             .create();
 
         let client = GraphQLClient::with_url("test-token", &server.url());
-        let result = get_issue(&client, "550e8400-e29b-41d4-a716-446655440000", OutputFormat::Human);
+        let result = get_issue(
+            &client,
+            "550e8400-e29b-41d4-a716-446655440000",
+            OutputFormat::Human,
+        );
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -1137,7 +1153,11 @@ mod tests {
             .create();
 
         let client = GraphQLClient::with_url("invalid-token", &server.url());
-        let result = get_issue(&client, "550e8400-e29b-41d4-a716-446655440000", OutputFormat::Human);
+        let result = get_issue(
+            &client,
+            "550e8400-e29b-41d4-a716-446655440000",
+            OutputFormat::Human,
+        );
 
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -1193,7 +1213,11 @@ mod tests {
             .create();
 
         let client = GraphQLClient::with_url("test-token", &server.url());
-        let result = get_issue(&client, "550e8400e29b41d4a716446655440000", OutputFormat::Human);
+        let result = get_issue(
+            &client,
+            "550e8400e29b41d4a716446655440000",
+            OutputFormat::Human,
+        );
 
         assert!(result.is_ok());
         mock.assert();
@@ -1447,7 +1471,12 @@ mod tests {
             priority: Some(1),
         };
 
-        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options, OutputFormat::Human);
+        let result = update_issue(
+            &client,
+            "550e8400-e29b-41d4-a716-446655440000",
+            options,
+            OutputFormat::Human,
+        );
         assert!(result.is_ok());
         mock.assert();
     }
@@ -1601,7 +1630,12 @@ mod tests {
             ..Default::default()
         };
 
-        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options, OutputFormat::Human);
+        let result = update_issue(
+            &client,
+            "550e8400-e29b-41d4-a716-446655440000",
+            options,
+            OutputFormat::Human,
+        );
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("Failed to update issue"));
@@ -1650,7 +1684,12 @@ mod tests {
             priority: Some(3),
         };
 
-        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options, OutputFormat::Human);
+        let result = update_issue(
+            &client,
+            "550e8400-e29b-41d4-a716-446655440000",
+            options,
+            OutputFormat::Human,
+        );
         assert!(result.is_ok());
         mock.assert();
     }
@@ -1681,7 +1720,12 @@ mod tests {
             ..Default::default()
         };
 
-        let result = update_issue(&client, "550e8400-e29b-41d4-a716-446655440000", options, OutputFormat::Human);
+        let result = update_issue(
+            &client,
+            "550e8400-e29b-41d4-a716-446655440000",
+            options,
+            OutputFormat::Human,
+        );
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("Not authenticated"));
