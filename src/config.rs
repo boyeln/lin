@@ -81,7 +81,8 @@ impl Config {
     ///
     /// If this is the first organization, it will be set as the default.
     pub fn add_org(&mut self, name: &str, token: &str) {
-        self.organizations.insert(name.to_string(), token.to_string());
+        self.organizations
+            .insert(name.to_string(), token.to_string());
 
         // Set as default if this is the first org
         if self.default_org.is_none() {
@@ -134,15 +135,12 @@ impl Config {
             })?,
         };
 
-        self.organizations
-            .get(org_name)
-            .cloned()
-            .ok_or_else(|| {
-                LinError::config(format!(
-                    "Organization '{}' not found in configuration. Use 'lin org add {}' to add it.",
-                    org_name, org_name
-                ))
-            })
+        self.organizations.get(org_name).cloned().ok_or_else(|| {
+            LinError::config(format!(
+                "Organization '{}' not found in configuration. Use 'lin org add {}' to add it.",
+                org_name, org_name
+            ))
+        })
     }
 
     /// List all configured organization names.
@@ -206,8 +204,14 @@ mod tests {
 
         let config: Config = serde_json::from_str(json).unwrap();
         assert_eq!(config.organizations.len(), 2);
-        assert_eq!(config.organizations.get("org1"), Some(&"token1".to_string()));
-        assert_eq!(config.organizations.get("org2"), Some(&"token2".to_string()));
+        assert_eq!(
+            config.organizations.get("org1"),
+            Some(&"token1".to_string())
+        );
+        assert_eq!(
+            config.organizations.get("org2"),
+            Some(&"token2".to_string())
+        );
         assert_eq!(config.default_org, Some("org1".to_string()));
     }
 
@@ -246,7 +250,7 @@ mod tests {
         let result = config.remove_org("org2");
         assert!(result.is_ok());
         assert_eq!(config.organizations.len(), 1);
-        assert!(config.organizations.get("org2").is_none());
+        assert!(!config.organizations.contains_key("org2"));
     }
 
     #[test]
@@ -290,7 +294,10 @@ mod tests {
         let config = Config::default();
         let result = config.get_token(None);
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("No organization specified"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("No organization specified"));
     }
 
     #[test]

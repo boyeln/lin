@@ -5,7 +5,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
-use lin::commands::{issue, org, team};
+use lin::commands::{issue, org, team, user};
 use lin::config::Config;
 use lin::output::{output_error, output_success};
 use serde::Serialize;
@@ -200,16 +200,12 @@ fn run(cli: Cli) -> lin::Result<()> {
         // All other commands require an API token
         _ => {
             let config = Config::load()?;
-            let token = require_api_token(
-                cli.api_token.as_deref(),
-                &config,
-                cli.org.as_deref(),
-            )?;
+            let token = require_api_token(cli.api_token.as_deref(), &config, cli.org.as_deref())?;
 
             match cli.command {
                 Commands::Issue { command } => handle_issue_command(command, &token),
                 Commands::Team { command } => handle_team_command(command, &token),
-                Commands::User { command } => handle_user_command(command),
+                Commands::User { command } => handle_user_command(command, &token),
                 Commands::Org { .. } => unreachable!(),
             }
         }
@@ -291,19 +287,13 @@ fn handle_team_command(command: TeamCommands, token: &str) -> lin::Result<()> {
     }
 }
 
-fn handle_user_command(command: UserCommands) -> lin::Result<()> {
-    let response = match command {
-        UserCommands::Me => PlaceholderResponse {
-            message: "Command not yet implemented",
-            command: "user me".into(),
-        },
-        UserCommands::List => PlaceholderResponse {
-            message: "Command not yet implemented",
-            command: "user list".into(),
-        },
-    };
-    output_success(&response);
-    Ok(())
+fn handle_user_command(command: UserCommands, token: &str) -> lin::Result<()> {
+    let client = GraphQLClient::new(token);
+
+    match command {
+        UserCommands::Me => user::me(&client),
+        UserCommands::List => user::list_users(&client),
+    }
 }
 
 fn handle_org_command(command: &OrgCommands, cli: &Cli) -> lin::Result<()> {
@@ -315,11 +305,7 @@ fn handle_org_command(command: &OrgCommands, cli: &Cli) -> lin::Result<()> {
         OrgCommands::Info => {
             // Info requires API token
             let config = Config::load()?;
-            let _token = require_api_token(
-                cli.api_token.as_deref(),
-                &config,
-                cli.org.as_deref(),
-            )?;
+            let _token = require_api_token(cli.api_token.as_deref(), &config, cli.org.as_deref())?;
 
             let response = PlaceholderResponse {
                 message: "Command not yet implemented",
