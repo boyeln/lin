@@ -5,7 +5,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
-use lin::commands::{org, team};
+use lin::commands::{issue, org, team};
 use lin::config::Config;
 use lin::output::{output_error, output_success};
 use serde::Serialize;
@@ -198,7 +198,7 @@ fn run(cli: Cli) -> lin::Result<()> {
             )?;
 
             match cli.command {
-                Commands::Issue { command } => handle_issue_command(command),
+                Commands::Issue { command } => handle_issue_command(command, &token),
                 Commands::Team { command } => handle_team_command(command, &token),
                 Commands::User { command } => handle_user_command(command),
                 Commands::Org { .. } => unreachable!(),
@@ -207,27 +207,51 @@ fn run(cli: Cli) -> lin::Result<()> {
     }
 }
 
-fn handle_issue_command(command: IssueCommands) -> lin::Result<()> {
-    let response = match command {
-        IssueCommands::List { .. } => PlaceholderResponse {
-            message: "Command not yet implemented",
-            command: "issue list".into(),
-        },
-        IssueCommands::Get { identifier } => PlaceholderResponse {
-            message: "Command not yet implemented",
-            command: format!("issue get {}", identifier),
-        },
-        IssueCommands::Create { .. } => PlaceholderResponse {
-            message: "Command not yet implemented",
-            command: "issue create".into(),
-        },
-        IssueCommands::Update { identifier, .. } => PlaceholderResponse {
-            message: "Command not yet implemented",
-            command: format!("issue update {}", identifier),
-        },
-    };
-    output_success(&response);
-    Ok(())
+fn handle_issue_command(command: IssueCommands, token: &str) -> lin::Result<()> {
+    let client = GraphQLClient::new(token);
+
+    match command {
+        IssueCommands::List {
+            team,
+            assignee,
+            state,
+            limit,
+        } => {
+            // If assignee is "me", we need to fetch the viewer ID first
+            let viewer_id = if assignee.as_deref() == Some("me") {
+                let response: lin::models::ViewerResponse =
+                    client.query(lin::api::queries::VIEWER_QUERY, serde_json::json!({}))?;
+                Some(response.viewer.id)
+            } else {
+                None
+            };
+
+            let options = issue::IssueListOptions {
+                team,
+                assignee,
+                state,
+                limit: Some(limit as i32),
+            };
+            issue::list_issues(&client, viewer_id.as_deref(), options)
+        }
+        IssueCommands::Get { identifier } => issue::get_issue(&client, &identifier),
+        IssueCommands::Create { .. } => {
+            let response = PlaceholderResponse {
+                message: "Command not yet implemented",
+                command: "issue create".into(),
+            };
+            output_success(&response);
+            Ok(())
+        }
+        IssueCommands::Update { identifier, .. } => {
+            let response = PlaceholderResponse {
+                message: "Command not yet implemented",
+                command: format!("issue update {}", identifier),
+            };
+            output_success(&response);
+            Ok(())
+        }
+    }
 }
 
 fn handle_team_command(command: TeamCommands, token: &str) -> lin::Result<()> {
