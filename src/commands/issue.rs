@@ -6,7 +6,8 @@ use crate::api::{queries, GraphQLClient};
 use crate::error::LinError;
 use crate::models::{
     IssueArchiveResponse, IssueCreateResponse, IssueDeleteResponse, IssueResponse,
-    IssueUnarchiveResponse, IssueUpdateResponse, IssuesResponse,
+    IssueUnarchiveResponse, IssueUpdateResponse, IssueWithCommentsResponse, IssuesResponse,
+    IssuesWithCommentsResponse,
 };
 use crate::output::{output, HumanDisplay, OutputFormat};
 use crate::Result;
@@ -296,6 +297,47 @@ pub fn get_issue(
     id_or_identifier: &str,
     format: OutputFormat,
 ) -> Result<()> {
+    get_issue_impl(client, id_or_identifier, false, format)
+}
+
+/// Get details of a specific issue by ID or identifier, optionally with comments.
+///
+/// Fetches a single issue from the Linear API and outputs it.
+/// When `with_comments` is true, also fetches and displays comments on the issue.
+///
+/// # Arguments
+///
+/// * `client` - The GraphQL client to use for the API request
+/// * `id_or_identifier` - The issue's UUID or human-readable identifier
+/// * `with_comments` - Whether to include comments in the output
+/// * `format` - The output format (Human or Json)
+pub fn get_issue_with_comments(
+    client: &GraphQLClient,
+    id_or_identifier: &str,
+    with_comments: bool,
+    format: OutputFormat,
+) -> Result<()> {
+    get_issue_impl(client, id_or_identifier, with_comments, format)
+}
+
+fn get_issue_impl(
+    client: &GraphQLClient,
+    id_or_identifier: &str,
+    with_comments: bool,
+    format: OutputFormat,
+) -> Result<()> {
+    if with_comments {
+        get_issue_with_comments_impl(client, id_or_identifier, format)
+    } else {
+        get_issue_without_comments(client, id_or_identifier, format)
+    }
+}
+
+fn get_issue_without_comments(
+    client: &GraphQLClient,
+    id_or_identifier: &str,
+    format: OutputFormat,
+) -> Result<()> {
     if is_uuid(id_or_identifier) {
         // Query by UUID
         let variables = serde_json::json!({
@@ -317,6 +359,47 @@ pub fn get_issue(
 
         let response: IssuesResponse =
             client.query(queries::ISSUE_BY_IDENTIFIER_QUERY, variables)?;
+
+        if response.issues.nodes.is_empty() {
+            return Err(LinError::api(format!(
+                "Issue '{}' not found",
+                id_or_identifier
+            )));
+        }
+
+        output(&response.issues.nodes[0], format);
+    }
+
+    Ok(())
+}
+
+fn get_issue_with_comments_impl(
+    client: &GraphQLClient,
+    id_or_identifier: &str,
+    format: OutputFormat,
+) -> Result<()> {
+    if is_uuid(id_or_identifier) {
+        // Query by UUID with comments
+        let variables = serde_json::json!({
+            "id": id_or_identifier
+        });
+        let response: IssueWithCommentsResponse =
+            client.query(queries::ISSUE_WITH_COMMENTS_QUERY, variables)?;
+        output(&response.issue, format);
+    } else {
+        // Parse as identifier and query with comments
+        let (team_key, number) = parse_identifier(id_or_identifier)?;
+
+        // Build filter to find issue by team key and number
+        let variables = serde_json::json!({
+            "filter": {
+                "team": { "key": { "eq": team_key } },
+                "number": { "eq": number }
+            }
+        });
+
+        let response: IssuesWithCommentsResponse =
+            client.query(queries::ISSUE_BY_IDENTIFIER_WITH_COMMENTS_QUERY, variables)?;
 
         if response.issues.nodes.is_empty() {
             return Err(LinError::api(format!(
