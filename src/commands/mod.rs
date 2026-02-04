@@ -6,6 +6,7 @@
 pub mod comment;
 pub mod issue;
 pub mod org;
+pub mod project;
 pub mod team;
 pub mod user;
 pub mod workflow;

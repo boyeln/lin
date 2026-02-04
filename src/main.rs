@@ -5,7 +5,7 @@
 use clap::{Parser, Subcommand};
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
-use lin::commands::{comment, issue, org, team, user, workflow};
+use lin::commands::{comment, issue, org, project, team, user, workflow};
 use lin::config::Config;
 use lin::output::{init_colors, output_error_with_format, output_success, OutputFormat};
 use serde::Serialize;
@@ -70,6 +70,11 @@ enum Commands {
         #[command(subcommand)]
         command: WorkflowCommands,
     },
+    /// Manage projects
+    Project {
+        #[command(subcommand)]
+        command: ProjectCommands,
+    },
 }
 
 /// Issue-related subcommands.
@@ -78,7 +83,8 @@ enum IssueCommands {
     /// List issues
     #[command(after_help = "EXAMPLES:\n  \
     lin issue list --team ENG --assignee me\n  \
-    lin issue list --state \"In Progress\" --limit 10")]
+    lin issue list --state \"In Progress\" --limit 10\n  \
+    lin issue list --project <project-id>")]
     List {
         /// Filter by team identifier
         #[arg(long)]
@@ -89,6 +95,9 @@ enum IssueCommands {
         /// Filter by state (e.g., "In Progress", "Done")
         #[arg(long)]
         state: Option<String>,
+        /// Filter by project ID
+        #[arg(long)]
+        project: Option<String>,
         /// Maximum number of issues to return
         #[arg(long, default_value = "50")]
         limit: u32,
@@ -225,6 +234,27 @@ enum WorkflowCommands {
     },
 }
 
+/// Project-related subcommands.
+#[derive(Subcommand, Debug)]
+enum ProjectCommands {
+    /// List all projects
+    #[command(after_help = "EXAMPLES:\n  \
+    lin project list\n  \
+    lin project list --team <team-id>")]
+    List {
+        /// Filter by team ID (optional)
+        #[arg(long)]
+        team: Option<String>,
+    },
+    /// Get details of a specific project
+    #[command(after_help = "EXAMPLES:\n  \
+    lin project get <project-id>")]
+    Get {
+        /// Project ID
+        id: String,
+    },
+}
+
 /// User-related subcommands.
 #[derive(Subcommand, Debug)]
 enum UserCommands {
@@ -306,6 +336,7 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
                 Commands::Team { command } => handle_team_command(command, &token, format),
                 Commands::User { command } => handle_user_command(command, &token, format),
                 Commands::Workflow { command } => handle_workflow_command(command, &token, format),
+                Commands::Project { command } => handle_project_command(command, &token, format),
                 Commands::Org { .. } => unreachable!(),
             }
         }
@@ -324,6 +355,7 @@ fn handle_issue_command(
             team,
             assignee,
             state,
+            project,
             limit,
         } => {
             // If assignee is "me", we need to fetch the viewer ID first
@@ -339,6 +371,7 @@ fn handle_issue_command(
                 team,
                 assignee,
                 state,
+                project,
                 limit: Some(limit as i32),
             };
             issue::list_issues(&client, viewer_id.as_deref(), options, format)
@@ -440,6 +473,22 @@ fn handle_workflow_command(
 
     match command {
         WorkflowCommands::List { team } => workflow::list_workflow_states(&client, &team, format),
+    }
+}
+
+fn handle_project_command(
+    command: ProjectCommands,
+    token: &str,
+    format: OutputFormat,
+) -> lin::Result<()> {
+    let client = GraphQLClient::new(token);
+
+    match command {
+        ProjectCommands::List { team } => {
+            let options = project::ProjectListOptions { team_id: team };
+            project::list_projects(&client, options, format)
+        }
+        ProjectCommands::Get { id } => project::get_project(&client, &id, format),
     }
 }
 

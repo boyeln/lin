@@ -97,6 +97,53 @@ query Users($first: Int) {
 }
 "#;
 
+/// Query to list projects in the organization.
+///
+/// Variables:
+/// - `first` (Int, optional): Number of projects to fetch (default: 50)
+/// - `filter` (ProjectFilter, optional): Filter criteria for projects
+///
+/// Returns: `ProjectsResponse`
+pub const PROJECTS_QUERY: &str = r#"
+query Projects($first: Int, $filter: ProjectFilter) {
+    projects(first: $first, filter: $filter) {
+        nodes {
+            id
+            name
+            description
+            state
+            createdAt
+            updatedAt
+            targetDate
+            startDate
+            progress
+        }
+    }
+}
+"#;
+
+/// Query to get a single project by ID.
+///
+/// Variables:
+/// - `id` (String!): The project's unique identifier
+///
+/// Returns: `ProjectResponse`
+pub const PROJECT_QUERY: &str = r#"
+query Project($id: String!) {
+    project(id: $id) {
+        id
+        name
+        description
+        state
+        createdAt
+        updatedAt
+        targetDate
+        startDate
+        progress
+    }
+}
+"#;
+
 /// Query to list issues with optional filters.
 ///
 /// Variables:
@@ -643,5 +690,23 @@ mod tests {
         assert!(ISSUE_UNARCHIVE_MUTATION.contains("$id: String!"));
         assert!(ISSUE_UNARCHIVE_MUTATION.contains("issueUnarchive"));
         assert!(ISSUE_UNARCHIVE_MUTATION.contains("success"));
+    }
+
+    #[test]
+    fn test_projects_query_is_valid() {
+        assert!(PROJECTS_QUERY.contains("query Projects"));
+        assert!(PROJECTS_QUERY.contains("$first: Int"));
+        assert!(PROJECTS_QUERY.contains("$filter: ProjectFilter"));
+        assert!(PROJECTS_QUERY.contains("projects"));
+        assert!(PROJECTS_QUERY.contains("nodes"));
+        assert!(PROJECTS_QUERY.contains("progress"));
+    }
+
+    #[test]
+    fn test_project_query_is_valid() {
+        assert!(PROJECT_QUERY.contains("query Project"));
+        assert!(PROJECT_QUERY.contains("$id: String!"));
+        assert!(PROJECT_QUERY.contains("project(id: $id)"));
+        assert!(PROJECT_QUERY.contains("progress"));
     }
 }

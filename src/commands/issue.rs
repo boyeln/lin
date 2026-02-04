@@ -22,6 +22,8 @@ pub struct IssueListOptions {
     pub assignee: Option<String>,
     /// Filter by state name.
     pub state: Option<String>,
+    /// Filter by project ID.
+    pub project: Option<String>,
     /// Maximum number of issues to return (default 50).
     pub limit: Option<i32>,
 }
@@ -244,6 +246,14 @@ pub fn list_issues(
         filter.insert(
             "state".to_string(),
             serde_json::json!({ "name": { "eq": state_name } }),
+        );
+    }
+
+    // Add project filter if specified
+    if let Some(project_id) = &options.project {
+        filter.insert(
+            "project".to_string(),
+            serde_json::json!({ "id": { "eq": project_id } }),
         );
     }
 
@@ -1087,6 +1097,36 @@ mod tests {
     }
 
     #[test]
+    fn test_list_issues_with_project_filter() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            project: Some("project-123".to_string()),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
     fn test_list_issues_with_limit() {
         let mut server = mockito::Server::new();
 
@@ -1140,6 +1180,7 @@ mod tests {
             team: Some("ENG".to_string()),
             assignee: Some("user-456".to_string()),
             state: Some("Done".to_string()),
+            project: Some("project-789".to_string()),
             limit: Some(25),
         };
 
