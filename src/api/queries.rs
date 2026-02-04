@@ -334,6 +334,34 @@ mutation IssueDelete($id: String!) {
 }
 "#;
 
+/// Mutation to archive an issue.
+///
+/// Variables:
+/// - `id` (String!): The issue's unique identifier
+///
+/// Returns: `IssueArchiveResponse`
+pub const ISSUE_ARCHIVE_MUTATION: &str = r#"
+mutation IssueArchive($id: String!) {
+    issueArchive(id: $id) {
+        success
+    }
+}
+"#;
+
+/// Mutation to unarchive an issue.
+///
+/// Variables:
+/// - `id` (String!): The issue's unique identifier
+///
+/// Returns: `IssueUnarchiveResponse`
+pub const ISSUE_UNARCHIVE_MUTATION: &str = r#"
+mutation IssueUnarchive($id: String!) {
+    issueUnarchive(id: $id) {
+        success
+    }
+}
+"#;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -430,5 +458,21 @@ mod tests {
         assert!(ISSUE_DELETE_MUTATION.contains("$id: String!"));
         assert!(ISSUE_DELETE_MUTATION.contains("issueDelete"));
         assert!(ISSUE_DELETE_MUTATION.contains("success"));
+    }
+
+    #[test]
+    fn test_issue_archive_mutation_is_valid() {
+        assert!(ISSUE_ARCHIVE_MUTATION.contains("mutation IssueArchive"));
+        assert!(ISSUE_ARCHIVE_MUTATION.contains("$id: String!"));
+        assert!(ISSUE_ARCHIVE_MUTATION.contains("issueArchive"));
+        assert!(ISSUE_ARCHIVE_MUTATION.contains("success"));
+    }
+
+    #[test]
+    fn test_issue_unarchive_mutation_is_valid() {
+        assert!(ISSUE_UNARCHIVE_MUTATION.contains("mutation IssueUnarchive"));
+        assert!(ISSUE_UNARCHIVE_MUTATION.contains("$id: String!"));
+        assert!(ISSUE_UNARCHIVE_MUTATION.contains("issueUnarchive"));
+        assert!(ISSUE_UNARCHIVE_MUTATION.contains("success"));
     }
 }

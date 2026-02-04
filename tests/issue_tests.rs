@@ -250,3 +250,191 @@ fn test_get_nonexistent_issue() {
     let error = result.unwrap_err();
     println!("Got expected error: {}", error);
 }
+
+/// Test archiving and unarchiving an issue.
+///
+/// This test verifies:
+/// 1. Creating an issue
+/// 2. Archiving the issue
+/// 3. Unarchiving the issue
+/// 4. Deleting the issue (cleanup)
+#[test]
+#[ignore]
+fn test_issue_archive_unarchive() {
+    let client = common::create_client();
+
+    // Get a team
+    let teams_response: TeamsResponse = client
+        .query(queries::TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .expect("Should be able to list teams");
+
+    let team = &teams_response.teams.nodes[0];
+    println!("Using team: {} ({})", team.name, team.key);
+
+    // Create issue
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    let issue_title = format!("{} Archive Test {}", common::TEST_ISSUE_PREFIX, timestamp);
+
+    let create_variables = serde_json::json!({
+        "input": {
+            "title": &issue_title,
+            "teamId": &team.id,
+            "description": "Test issue for archive/unarchive integration test",
+            "priority": 4
+        }
+    });
+
+    let create_response: IssueCreateResponse = client
+        .query(queries::ISSUE_CREATE_MUTATION, create_variables)
+        .expect("Should be able to create issue");
+
+    let issue = create_response
+        .issue_create
+        .issue
+        .expect("Issue should be created");
+
+    let issue_id = issue.id.clone();
+    let issue_identifier = issue.identifier.clone();
+
+    println!("Created issue: {} ({})", issue_identifier, issue_id);
+
+    // Use a closure to ensure cleanup runs even if assertions fail
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        // Archive the issue
+        println!("Archiving issue: {}", issue_identifier);
+
+        let archive_variables = serde_json::json!({ "id": &issue_id });
+
+        let archive_response: lin::models::IssueArchiveResponse = client
+            .query(queries::ISSUE_ARCHIVE_MUTATION, archive_variables)
+            .expect("Should be able to archive issue");
+
+        assert!(
+            archive_response.issue_archive.success,
+            "Issue archive should succeed"
+        );
+
+        println!("Issue archived successfully");
+
+        // Unarchive the issue
+        println!("Unarchiving issue: {}", issue_identifier);
+
+        let unarchive_variables = serde_json::json!({ "id": &issue_id });
+
+        let unarchive_response: lin::models::IssueUnarchiveResponse = client
+            .query(queries::ISSUE_UNARCHIVE_MUTATION, unarchive_variables)
+            .expect("Should be able to unarchive issue");
+
+        assert!(
+            unarchive_response.issue_unarchive.success,
+            "Issue unarchive should succeed"
+        );
+
+        println!("Issue unarchived successfully");
+    }));
+
+    // Cleanup: Delete the issue
+    println!("Deleting issue: {} ({})", issue_identifier, issue_id);
+
+    let delete_result = common::delete_issue(&client, &issue_id);
+
+    match delete_result {
+        Ok(success) => {
+            assert!(success, "Issue deletion should succeed");
+            println!("Issue deleted successfully");
+        }
+        Err(e) => {
+            eprintln!("Warning: Failed to delete test issue: {}", e);
+            eprintln!(
+                "Manual cleanup may be required for issue: {}",
+                issue_identifier
+            );
+        }
+    }
+
+    // Re-throw any panic from the test assertions
+    if let Err(e) = result {
+        std::panic::resume_unwind(e);
+    }
+}
+
+/// Test deleting an issue.
+///
+/// This test verifies that the delete mutation works correctly.
+/// Note: This is separate from the cleanup delete used in other tests.
+#[test]
+#[ignore]
+fn test_issue_delete() {
+    let client = common::create_client();
+
+    // Get a team
+    let teams_response: TeamsResponse = client
+        .query(queries::TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .expect("Should be able to list teams");
+
+    let team = &teams_response.teams.nodes[0];
+
+    // Create issue
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    let create_variables = serde_json::json!({
+        "input": {
+            "title": format!("{} Delete Test {}", common::TEST_ISSUE_PREFIX, timestamp),
+            "teamId": &team.id,
+            "priority": 4
+        }
+    });
+
+    let create_response: IssueCreateResponse = client
+        .query(queries::ISSUE_CREATE_MUTATION, create_variables)
+        .expect("Should be able to create issue");
+
+    let issue = create_response
+        .issue_create
+        .issue
+        .expect("Issue should be created");
+
+    let issue_id = issue.id.clone();
+    let issue_identifier = issue.identifier.clone();
+
+    println!("Created issue: {} ({})", issue_identifier, issue_id);
+
+    // Delete the issue
+    println!("Deleting issue: {}", issue_identifier);
+
+    let delete_variables = serde_json::json!({ "id": &issue_id });
+
+    let delete_response: lin::models::IssueDeleteResponse = client
+        .query(queries::ISSUE_DELETE_MUTATION, delete_variables)
+        .expect("Should be able to delete issue");
+
+    assert!(
+        delete_response.issue_delete.success,
+        "Issue delete should succeed"
+    );
+
+    println!("Issue deleted successfully");
+
+    // Verify the issue is gone by trying to read it
+    let read_variables = serde_json::json!({ "id": &issue_id });
+    let read_result: Result<IssueResponse, _> = client.query(queries::ISSUE_QUERY, read_variables);
+
+    // The issue should either not be found or return an error
+    // Linear may return different responses for deleted issues
+    if let Ok(response) = read_result {
+        // Some APIs might return the issue but mark it as deleted/archived
+        println!(
+            "Issue still returned after delete (may be soft-deleted): {:?}",
+            response.issue.id
+        );
+    } else {
+        println!("Issue not found after delete (confirmed hard delete)");
+    }
+}

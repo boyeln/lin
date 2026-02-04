@@ -58,6 +58,15 @@ lin issue create --team <team-id> --title "Fix bug" --description "Details here"
 # Update an issue
 lin issue update ENG-123 --title "Updated title" --state <state-id>
 
+# Delete an issue
+lin issue delete ENG-123
+
+# Archive an issue
+lin issue archive ENG-123
+
+# Unarchive an issue
+lin issue unarchive ENG-123
+
 # List all teams
 lin team list
 
@@ -102,6 +111,8 @@ lin org set-default <name>
 | Token from CLI | ✅ | Pass token via --api-token flag |
 | Token from env | ✅ | Read token from LINEAR_API_TOKEN |
 | Token from file | ✅ | Read token from config file |
+| Delete issues | ✅ | Delete an issue by ID or identifier |
+| Archive/unarchive | ✅ | Archive or unarchive issues |
 | Comments | ❌ | Add/list comments on issues |
 | Projects | ❌ | List and filter by projects |
 | Cycles/Sprints | ❌ | View and manage cycles |
@@ -112,9 +123,7 @@ lin org set-default <name>
 | Templates | ❌ | Bulk create issues from templates |
 | Git integration | ❌ | Link issues to branches |
 | Search | ❌ | Full-text search for issues |
-| **Core Issue Operations** | | |
-| Delete issues | ❌ | Delete an issue by ID or identifier |
-| Archive/unarchive | ❌ | Archive or unarchive issues |
+| **Issue Relations** | | |
 | Issue relations | ❌ | Parent/child, blocks/blocked by, relates to |
 | **Advanced Filtering** | | |
 | Date range filters | ❌ | Filter by created/updated date ranges |
