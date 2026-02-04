@@ -83,6 +83,18 @@ lin user list
 lin workflow list --team <team-id>
 lin workflow list --team ENG
 
+# List all projects
+lin project list
+
+# List projects for a specific team
+lin project list --team <team-id>
+
+# Get a specific project
+lin project get <project-id>
+
+# List issues filtered by project
+lin issue list --project <project-id>
+
 # Manage organizations
 lin org list
 lin org add <name>
@@ -114,7 +126,7 @@ lin org set-default <name>
 | Delete issues | ✅ | Delete an issue by ID or identifier |
 | Archive/unarchive | ✅ | Archive or unarchive issues |
 | Comments | ❌ | Add/list comments on issues |
-| Projects | ❌ | List and filter by projects |
+| Projects | ✅ | List projects, get project details, filter issues by project |
 | Cycles/Sprints | ❌ | View and manage cycles |
 | Labels | ❌ | Manage issue labels |
 | Workflow states | ✅ | List workflow states for a team |
