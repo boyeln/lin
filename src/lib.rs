@@ -8,12 +8,19 @@
 //! - JSON output for all commands (scriptability)
 //! - Nested command structure (e.g., `lin issue list`)
 //! - Cross-platform support
+//! - Multi-organization support with configuration file
 //!
 //! # Modules
 //!
 //! - [`error`] - Custom error types for the CLI
 //! - [`output`] - JSON output utilities
+//! - [`config`] - Configuration management
+//! - [`auth`] - Authentication and token resolution
+//! - [`commands`] - Command implementations
 
+pub mod auth;
+pub mod commands;
+pub mod config;
 pub mod error;
 pub mod output;
 
