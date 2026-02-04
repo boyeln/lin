@@ -54,6 +54,12 @@ lin/
 ├── Cargo.lock              # Locked dependency versions
 ├── README.md               # User-facing documentation
 ├── CLAUDE.md               # This file - development guide
+├── .github/workflows/      # CI workflow
+├── tests/                  # Integration tests
+│   ├── common/mod.rs       # Shared test utilities
+│   ├── user_tests.rs       # User authentication tests
+│   ├── team_tests.rs       # Team listing tests
+│   └── issue_tests.rs      # Issue CRUD lifecycle tests
 └── src/
     ├── main.rs             # Entry point and CLI definition (clap)
     ├── lib.rs              # Library root, exports all modules
@@ -102,10 +108,12 @@ LinError::Parse(String)   // Parsing errors
 
 ## Testing
 
-Tests use mockito for HTTP mocking. Each module has its own tests.
+### Unit Tests
+
+Unit tests use mockito for HTTP mocking. Each module has its own tests.
 
 ```bash
-# Run all tests (137 tests)
+# Run unit tests
 cargo test
 
 # Run tests for specific modules
@@ -116,6 +124,24 @@ cargo test config
 # Run with verbose output
 cargo test -- --nocapture
 ```
+
+### Integration Tests
+
+Integration tests run against the real Linear API. They are marked with `#[ignore]` and don't run during normal `cargo test`.
+
+```bash
+# Run integration tests (requires LINEAR_API_TOKEN)
+LINEAR_API_TOKEN=your_token cargo test --test user_tests --test team_tests --test issue_tests -- --ignored --test-threads=1
+```
+
+Integration tests:
+- **user_tests**: Verify authentication and user info retrieval
+- **team_tests**: Verify team listing
+- **issue_tests**: Full issue lifecycle (create → read → update → delete)
+
+All tests clean up after themselves by deleting created issues. Test issues are prefixed with `[lin-test]` for identification.
+
+**Note**: Integration tests run automatically in CI on pull requests. The `LINEAR_API_TOKEN` secret must be configured in GitHub.
 
 ## Linear API
 
