@@ -136,6 +136,27 @@ enum IssueCommands {
         #[arg(long)]
         priority: Option<u8>,
     },
+    /// Delete an issue
+    #[command(after_help = "EXAMPLES:\n  \
+    lin issue delete ENG-123")]
+    Delete {
+        /// Issue identifier (e.g., "ENG-123") or UUID
+        identifier: String,
+    },
+    /// Archive an issue
+    #[command(after_help = "EXAMPLES:\n  \
+    lin issue archive ENG-123")]
+    Archive {
+        /// Issue identifier (e.g., "ENG-123") or UUID
+        identifier: String,
+    },
+    /// Unarchive an issue
+    #[command(after_help = "EXAMPLES:\n  \
+    lin issue unarchive ENG-123")]
+    Unarchive {
+        /// Issue identifier (e.g., "ENG-123") or UUID
+        identifier: String,
+    },
 }
 
 /// Team-related subcommands.
@@ -302,6 +323,11 @@ fn handle_issue_command(
                 priority: priority.map(|p| p as i32),
             };
             issue::update_issue(&client, &identifier, options, format)
+        }
+        IssueCommands::Delete { identifier } => issue::delete_issue(&client, &identifier, format),
+        IssueCommands::Archive { identifier } => issue::archive_issue(&client, &identifier, format),
+        IssueCommands::Unarchive { identifier } => {
+            issue::unarchive_issue(&client, &identifier, format)
         }
     }
 }

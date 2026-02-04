@@ -4,9 +4,13 @@
 
 use crate::api::{queries, GraphQLClient};
 use crate::error::LinError;
-use crate::models::{IssueCreateResponse, IssueResponse, IssueUpdateResponse, IssuesResponse};
-use crate::output::{output, OutputFormat};
+use crate::models::{
+    IssueArchiveResponse, IssueCreateResponse, IssueDeleteResponse, IssueResponse,
+    IssueUnarchiveResponse, IssueUpdateResponse, IssuesResponse,
+};
+use crate::output::{output, HumanDisplay, OutputFormat};
 use crate::Result;
+use serde::Serialize;
 
 /// Options for listing issues.
 #[derive(Debug, Clone, Default)]
@@ -505,6 +509,174 @@ pub fn update_issue(
             "Issue update succeeded but no issue returned",
         )),
     }
+}
+
+/// Simple message response for delete/archive operations.
+#[derive(Debug, Serialize)]
+struct MessageResponse {
+    message: String,
+}
+
+impl HumanDisplay for MessageResponse {
+    fn human_fmt(&self) -> String {
+        self.message.clone()
+    }
+}
+
+/// Resolve an issue identifier to its UUID.
+///
+/// If the input is already a UUID, returns it as-is.
+/// Otherwise, parses the identifier and looks up the issue.
+fn resolve_issue_id(client: &GraphQLClient, id_or_identifier: &str) -> Result<String> {
+    if is_uuid(id_or_identifier) {
+        Ok(id_or_identifier.to_string())
+    } else {
+        let (team_key, number) = parse_identifier(id_or_identifier)?;
+
+        let lookup_variables = serde_json::json!({
+            "filter": {
+                "team": { "key": { "eq": team_key } },
+                "number": { "eq": number }
+            }
+        });
+
+        let lookup_response: IssuesResponse =
+            client.query(queries::ISSUE_BY_IDENTIFIER_QUERY, lookup_variables)?;
+
+        if lookup_response.issues.nodes.is_empty() {
+            return Err(LinError::api(format!(
+                "Issue '{}' not found",
+                id_or_identifier
+            )));
+        }
+
+        Ok(lookup_response.issues.nodes[0].id.clone())
+    }
+}
+
+/// Delete an issue in Linear.
+///
+/// Deletes an issue identified by ID or identifier (e.g., "ENG-123").
+///
+/// # Arguments
+///
+/// * `client` - The GraphQL client to use for the API request
+/// * `id_or_identifier` - The issue's UUID or human-readable identifier
+/// * `format` - The output format (Human or Json)
+///
+/// # Example
+///
+/// ```ignore
+/// use lin::api::GraphQLClient;
+/// use lin::commands::issue::delete_issue;
+/// use lin::output::OutputFormat;
+///
+/// let client = GraphQLClient::new("lin_api_xxxxx");
+/// delete_issue(&client, "ENG-123", OutputFormat::Human)?;
+/// ```
+pub fn delete_issue(
+    client: &GraphQLClient,
+    id_or_identifier: &str,
+    format: OutputFormat,
+) -> Result<()> {
+    let issue_id = resolve_issue_id(client, id_or_identifier)?;
+
+    let variables = serde_json::json!({ "id": issue_id });
+    let response: IssueDeleteResponse = client.query(queries::ISSUE_DELETE_MUTATION, variables)?;
+
+    if !response.issue_delete.success {
+        return Err(LinError::api("Failed to delete issue"));
+    }
+
+    let message = MessageResponse {
+        message: format!("Issue '{}' deleted successfully", id_or_identifier),
+    };
+    output(&message, format);
+    Ok(())
+}
+
+/// Archive an issue in Linear.
+///
+/// Archives an issue identified by ID or identifier (e.g., "ENG-123").
+///
+/// # Arguments
+///
+/// * `client` - The GraphQL client to use for the API request
+/// * `id_or_identifier` - The issue's UUID or human-readable identifier
+/// * `format` - The output format (Human or Json)
+///
+/// # Example
+///
+/// ```ignore
+/// use lin::api::GraphQLClient;
+/// use lin::commands::issue::archive_issue;
+/// use lin::output::OutputFormat;
+///
+/// let client = GraphQLClient::new("lin_api_xxxxx");
+/// archive_issue(&client, "ENG-123", OutputFormat::Human)?;
+/// ```
+pub fn archive_issue(
+    client: &GraphQLClient,
+    id_or_identifier: &str,
+    format: OutputFormat,
+) -> Result<()> {
+    let issue_id = resolve_issue_id(client, id_or_identifier)?;
+
+    let variables = serde_json::json!({ "id": issue_id });
+    let response: IssueArchiveResponse =
+        client.query(queries::ISSUE_ARCHIVE_MUTATION, variables)?;
+
+    if !response.issue_archive.success {
+        return Err(LinError::api("Failed to archive issue"));
+    }
+
+    let message = MessageResponse {
+        message: format!("Issue '{}' archived successfully", id_or_identifier),
+    };
+    output(&message, format);
+    Ok(())
+}
+
+/// Unarchive an issue in Linear.
+///
+/// Unarchives an issue identified by ID or identifier (e.g., "ENG-123").
+///
+/// # Arguments
+///
+/// * `client` - The GraphQL client to use for the API request
+/// * `id_or_identifier` - The issue's UUID or human-readable identifier
+/// * `format` - The output format (Human or Json)
+///
+/// # Example
+///
+/// ```ignore
+/// use lin::api::GraphQLClient;
+/// use lin::commands::issue::unarchive_issue;
+/// use lin::output::OutputFormat;
+///
+/// let client = GraphQLClient::new("lin_api_xxxxx");
+/// unarchive_issue(&client, "ENG-123", OutputFormat::Human)?;
+/// ```
+pub fn unarchive_issue(
+    client: &GraphQLClient,
+    id_or_identifier: &str,
+    format: OutputFormat,
+) -> Result<()> {
+    let issue_id = resolve_issue_id(client, id_or_identifier)?;
+
+    let variables = serde_json::json!({ "id": issue_id });
+    let response: IssueUnarchiveResponse =
+        client.query(queries::ISSUE_UNARCHIVE_MUTATION, variables)?;
+
+    if !response.issue_unarchive.success {
+        return Err(LinError::api("Failed to unarchive issue"));
+    }
+
+    let message = MessageResponse {
+        message: format!("Issue '{}' unarchived successfully", id_or_identifier),
+    };
+    output(&message, format);
+    Ok(())
 }
 
 #[cfg(test)]
@@ -1729,6 +1901,479 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("Not authenticated"));
+        mock.assert();
+    }
+
+    // =============================================================================
+    // delete_issue tests
+    // =============================================================================
+
+    #[test]
+    fn test_delete_issue_by_uuid() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issueDelete": {
+                            "success": true
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let result = delete_issue(
+            &client,
+            "550e8400-e29b-41d4-a716-446655440000",
+            OutputFormat::Human,
+        );
+
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_delete_issue_by_identifier() {
+        let mut server = mockito::Server::new();
+
+        // First mock: lookup by identifier
+        let lookup_mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r##"{
+                    "data": {
+                        "issues": {
+                            "nodes": [
+                                {
+                                    "id": "issue-uuid-123",
+                                    "identifier": "ENG-123",
+                                    "title": "Issue to delete",
+                                    "description": null,
+                                    "priority": 0,
+                                    "state": null,
+                                    "team": null,
+                                    "assignee": null,
+                                    "createdAt": "2024-01-01T00:00:00.000Z",
+                                    "updatedAt": "2024-01-01T00:00:00.000Z"
+                                }
+                            ]
+                        }
+                    }
+                }"##,
+            )
+            .create();
+
+        // Second mock: delete mutation
+        let delete_mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issueDelete": {
+                            "success": true
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let result = delete_issue(&client, "ENG-123", OutputFormat::Human);
+
+        assert!(result.is_ok());
+        lookup_mock.assert();
+        delete_mock.assert();
+    }
+
+    #[test]
+    fn test_delete_issue_not_found() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let result = delete_issue(&client, "ENG-99999", OutputFormat::Human);
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("not found"));
+        mock.assert();
+    }
+
+    #[test]
+    fn test_delete_issue_failure() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issueDelete": {
+                            "success": false
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let result = delete_issue(
+            &client,
+            "550e8400-e29b-41d4-a716-446655440000",
+            OutputFormat::Human,
+        );
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Failed to delete issue"));
+        mock.assert();
+    }
+
+    #[test]
+    fn test_delete_issue_invalid_identifier() {
+        let server = mockito::Server::new();
+        let client = GraphQLClient::with_url("test-token", &server.url());
+
+        let result = delete_issue(&client, "invalid-identifier", OutputFormat::Human);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Invalid team key"));
+    }
+
+    // =============================================================================
+    // archive_issue tests
+    // =============================================================================
+
+    #[test]
+    fn test_archive_issue_by_uuid() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issueArchive": {
+                            "success": true
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let result = archive_issue(
+            &client,
+            "550e8400-e29b-41d4-a716-446655440000",
+            OutputFormat::Human,
+        );
+
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_archive_issue_by_identifier() {
+        let mut server = mockito::Server::new();
+
+        // First mock: lookup by identifier
+        let lookup_mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r##"{
+                    "data": {
+                        "issues": {
+                            "nodes": [
+                                {
+                                    "id": "issue-uuid-456",
+                                    "identifier": "ENG-456",
+                                    "title": "Issue to archive",
+                                    "description": null,
+                                    "priority": 0,
+                                    "state": null,
+                                    "team": null,
+                                    "assignee": null,
+                                    "createdAt": "2024-01-01T00:00:00.000Z",
+                                    "updatedAt": "2024-01-01T00:00:00.000Z"
+                                }
+                            ]
+                        }
+                    }
+                }"##,
+            )
+            .create();
+
+        // Second mock: archive mutation
+        let archive_mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issueArchive": {
+                            "success": true
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let result = archive_issue(&client, "ENG-456", OutputFormat::Human);
+
+        assert!(result.is_ok());
+        lookup_mock.assert();
+        archive_mock.assert();
+    }
+
+    #[test]
+    fn test_archive_issue_failure() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issueArchive": {
+                            "success": false
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let result = archive_issue(
+            &client,
+            "550e8400-e29b-41d4-a716-446655440000",
+            OutputFormat::Human,
+        );
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Failed to archive issue"));
+        mock.assert();
+    }
+
+    #[test]
+    fn test_archive_issue_not_found() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let result = archive_issue(&client, "ENG-99999", OutputFormat::Human);
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("not found"));
+        mock.assert();
+    }
+
+    // =============================================================================
+    // unarchive_issue tests
+    // =============================================================================
+
+    #[test]
+    fn test_unarchive_issue_by_uuid() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issueUnarchive": {
+                            "success": true
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let result = unarchive_issue(
+            &client,
+            "550e8400-e29b-41d4-a716-446655440000",
+            OutputFormat::Human,
+        );
+
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_unarchive_issue_by_identifier() {
+        let mut server = mockito::Server::new();
+
+        // First mock: lookup by identifier
+        let lookup_mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r##"{
+                    "data": {
+                        "issues": {
+                            "nodes": [
+                                {
+                                    "id": "issue-uuid-789",
+                                    "identifier": "ENG-789",
+                                    "title": "Issue to unarchive",
+                                    "description": null,
+                                    "priority": 0,
+                                    "state": null,
+                                    "team": null,
+                                    "assignee": null,
+                                    "createdAt": "2024-01-01T00:00:00.000Z",
+                                    "updatedAt": "2024-01-01T00:00:00.000Z"
+                                }
+                            ]
+                        }
+                    }
+                }"##,
+            )
+            .create();
+
+        // Second mock: unarchive mutation
+        let unarchive_mock = server
+            .mock("POST", "/")
+            .match_header("authorization", "test-token")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issueUnarchive": {
+                            "success": true
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let result = unarchive_issue(&client, "ENG-789", OutputFormat::Human);
+
+        assert!(result.is_ok());
+        lookup_mock.assert();
+        unarchive_mock.assert();
+    }
+
+    #[test]
+    fn test_unarchive_issue_failure() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issueUnarchive": {
+                            "success": false
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let result = unarchive_issue(
+            &client,
+            "550e8400-e29b-41d4-a716-446655440000",
+            OutputFormat::Human,
+        );
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("Failed to unarchive issue"));
+        mock.assert();
+    }
+
+    #[test]
+    fn test_unarchive_issue_not_found() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let result = unarchive_issue(&client, "ENG-99999", OutputFormat::Human);
+
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.to_string().contains("not found"));
         mock.assert();
     }
 }

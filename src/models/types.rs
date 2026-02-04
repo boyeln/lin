@@ -217,6 +217,38 @@ pub struct IssueDeleteResponse {
     pub issue_delete: IssueDeletePayload,
 }
 
+/// Response for issue archive mutation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueArchivePayload {
+    /// Whether the mutation was successful.
+    pub success: bool,
+}
+
+/// Response wrapper for issue archive.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueArchiveResponse {
+    /// The mutation payload.
+    pub issue_archive: IssueArchivePayload,
+}
+
+/// Response for issue unarchive mutation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueUnarchivePayload {
+    /// Whether the mutation was successful.
+    pub success: bool,
+}
+
+/// Response wrapper for issue unarchive.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueUnarchiveResponse {
+    /// The mutation payload.
+    pub issue_unarchive: IssueUnarchivePayload,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
