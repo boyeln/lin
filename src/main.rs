@@ -203,7 +203,11 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
     }
 }
 
-fn handle_issue_command(command: IssueCommands, token: &str, format: OutputFormat) -> lin::Result<()> {
+fn handle_issue_command(
+    command: IssueCommands,
+    token: &str,
+    format: OutputFormat,
+) -> lin::Result<()> {
     let client = GraphQLClient::new(token);
 
     match command {
@@ -269,7 +273,11 @@ fn handle_issue_command(command: IssueCommands, token: &str, format: OutputForma
     }
 }
 
-fn handle_team_command(command: TeamCommands, token: &str, format: OutputFormat) -> lin::Result<()> {
+fn handle_team_command(
+    command: TeamCommands,
+    token: &str,
+    format: OutputFormat,
+) -> lin::Result<()> {
     let client = GraphQLClient::new(token);
 
     match command {
@@ -278,7 +286,11 @@ fn handle_team_command(command: TeamCommands, token: &str, format: OutputFormat)
     }
 }
 
-fn handle_user_command(command: UserCommands, token: &str, format: OutputFormat) -> lin::Result<()> {
+fn handle_user_command(
+    command: UserCommands,
+    token: &str,
+    format: OutputFormat,
+) -> lin::Result<()> {
     let client = GraphQLClient::new(token);
 
     match command {

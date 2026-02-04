@@ -111,6 +111,7 @@ lin org set-default <name>
 | Search | ❌ | Full-text search for issues |
 | Human-friendly output | ✅ | Human-readable output (default) |
 | JSON output | ✅ | Machine-readable JSON output (--json flag) |
+| Colored output | ❌ | Syntax highlighting and colors for terminal |
 
 ## Priority Values
 

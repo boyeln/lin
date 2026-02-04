@@ -195,8 +195,8 @@ pub fn output_error_with_format(error: &LinError, format: OutputFormat) -> ! {
                     message: error.to_string(),
                 },
             };
-            let json =
-                serde_json::to_string_pretty(&response).expect("Failed to serialize error response");
+            let json = serde_json::to_string_pretty(&response)
+                .expect("Failed to serialize error response");
             eprintln!("{}", json);
         }
     }
