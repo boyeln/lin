@@ -4,3 +4,4 @@
 //! separated from the argument parsing in main.rs.
 
 pub mod org;
+pub mod team;
