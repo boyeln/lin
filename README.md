@@ -121,7 +121,7 @@ lin org set-default <name>
 | Interactive TUI | ❌ | Interactive terminal UI for browsing |
 | Caching | ❌ | Cache responses for faster repeated queries |
 | Config validation | ❌ | Validate configuration file |
-| Examples in help | ❌ | Add usage examples to --help output |
+| Examples in help | ✅ | Add usage examples to --help output |
 | Human-friendly output | ✅ | Human-readable output (default) |
 | JSON output | ✅ | Machine-readable JSON output (--json flag) |
 | Colored output | ❌ | Syntax highlighting and colors for terminal |

@@ -15,6 +15,11 @@ use serde::Serialize;
 #[command(name = "lin")]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
+#[command(after_help = "EXAMPLES:\n  \
+lin issue list --team ENG --assignee me\n  \
+lin issue get ENG-123\n  \
+lin user me\n  \
+lin --json issue list | jq '.data[].identifier'")]
 struct Cli {
     /// Linear API token (can also be set via LINEAR_API_TOKEN env var)
     #[arg(long, global = true)]
@@ -61,6 +66,9 @@ enum Commands {
 #[derive(Subcommand, Debug)]
 enum IssueCommands {
     /// List issues
+    #[command(after_help = "EXAMPLES:\n  \
+    lin issue list --team ENG --assignee me\n  \
+    lin issue list --state \"In Progress\" --limit 10")]
     List {
         /// Filter by team identifier
         #[arg(long)]
@@ -76,11 +84,15 @@ enum IssueCommands {
         limit: u32,
     },
     /// Get details of a specific issue
+    #[command(after_help = "EXAMPLES:\n  \
+    lin issue get ENG-123")]
     Get {
         /// Issue identifier (e.g., "ENG-123")
         identifier: String,
     },
     /// Create a new issue
+    #[command(after_help = "EXAMPLES:\n  \
+    lin issue create --team <team-id> --title \"Fix bug\" --priority 2")]
     Create {
         /// Issue title
         #[arg(long)]
@@ -102,6 +114,9 @@ enum IssueCommands {
         priority: Option<u8>,
     },
     /// Update an existing issue
+    #[command(after_help = "EXAMPLES:\n  \
+    lin issue update ENG-123 --title \"New title\"\n  \
+    lin issue update ENG-123 --state <state-id> --priority 1")]
     Update {
         /// Issue identifier (e.g., "ENG-123") or UUID
         identifier: String,
@@ -127,8 +142,12 @@ enum IssueCommands {
 #[derive(Subcommand, Debug)]
 enum TeamCommands {
     /// List all teams
+    #[command(after_help = "EXAMPLES:\n  \
+    lin team list")]
     List,
     /// Get details of a specific team
+    #[command(after_help = "EXAMPLES:\n  \
+    lin team get ENG")]
     Get {
         /// Team identifier or key
         identifier: String,
@@ -139,8 +158,12 @@ enum TeamCommands {
 #[derive(Subcommand, Debug)]
 enum UserCommands {
     /// Get information about the authenticated user
+    #[command(after_help = "EXAMPLES:\n  \
+    lin user me")]
     Me,
     /// List users in the organization
+    #[command(after_help = "EXAMPLES:\n  \
+    lin user list")]
     List,
 }
 
@@ -148,23 +171,33 @@ enum UserCommands {
 #[derive(Subcommand, Debug)]
 enum OrgCommands {
     /// Add an organization (reads API token from stdin)
+    #[command(after_help = "EXAMPLES:\n  \
+    echo \"lin_api_...\" | lin org add my-org")]
     Add {
         /// Name to identify this organization
         name: String,
     },
     /// Remove an organization
+    #[command(after_help = "EXAMPLES:\n  \
+    lin org remove my-org")]
     Remove {
         /// Name of the organization to remove
         name: String,
     },
     /// List all configured organizations
+    #[command(after_help = "EXAMPLES:\n  \
+    lin org list")]
     List,
     /// Set the default organization
+    #[command(after_help = "EXAMPLES:\n  \
+    lin org set-default my-org")]
     SetDefault {
         /// Name of the organization to set as default
         name: String,
     },
     /// Get information about the current Linear organization (requires API token)
+    #[command(after_help = "EXAMPLES:\n  \
+    lin org info")]
     Info,
 }
 
