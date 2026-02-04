@@ -124,7 +124,7 @@ lin org set-default <name>
 | Examples in help | ✅ | Add usage examples to --help output |
 | Human-friendly output | ✅ | Human-readable output (default) |
 | JSON output | ✅ | Machine-readable JSON output (--json flag) |
-| Colored output | ❌ | Syntax highlighting and colors for terminal |
+| Colored output | ✅ | Syntax highlighting and colors for terminal |
 
 ## Priority Values
 
@@ -163,6 +163,18 @@ $ lin team list
 
 [DES] Design
 ```
+
+### Colored Output
+
+Human-friendly output includes colors to improve readability:
+- Issue identifiers are shown in **bold cyan**
+- Status is colored based on workflow state (green for completed, yellow for in progress, etc.)
+- Priority levels have distinct colors (red for urgent, yellow for high, etc.)
+- Errors are displayed in **bold red**
+
+Colors are automatically disabled when:
+- Output is piped to another command
+- The `NO_COLOR` environment variable is set (see [no-color.org](https://no-color.org/))
 
 ### JSON Output
 

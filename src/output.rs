@@ -1,11 +1,25 @@
 //! Output utilities for CLI output.
 //!
 //! Supports both human-friendly (default) and JSON output formats.
+//! Human output includes colored formatting when writing to a terminal.
 
+use colored::Colorize;
 use serde::Serialize;
 
 use crate::error::LinError;
 use crate::models::{Issue, Team, User};
+
+/// Initialize color support based on terminal capabilities.
+///
+/// Respects the NO_COLOR environment variable (https://no-color.org/).
+/// Disables colors when stdout is not a TTY (e.g., when piped).
+pub fn init_colors() {
+    // Disable colors if stdout is not a TTY (piped output)
+    if !atty::is(atty::Stream::Stdout) {
+        colored::control::set_override(false);
+    }
+    // The colored crate automatically respects NO_COLOR env var
+}
 
 /// Output format for CLI responses.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -57,13 +71,18 @@ pub trait HumanDisplay {
 
 impl HumanDisplay for User {
     fn human_fmt(&self) -> String {
-        let status = if self.active { "" } else { " (inactive)" };
+        let name = self.name.bold();
+        let status = if self.active {
+            String::new()
+        } else {
+            format!(" {}", "(inactive)".red())
+        };
         let display = self
             .display_name
             .as_ref()
-            .map(|d| format!(" ({})", d))
+            .map(|d| format!(" {}", format!("({})", d).dimmed()))
             .unwrap_or_default();
-        format!("{}{}{}\n  {}", self.name, display, status, self.email)
+        format!("{}{}{}\n  {}", name, display, status, self.email.dimmed())
     }
 }
 
@@ -72,38 +91,53 @@ impl HumanDisplay for Team {
         let desc = self
             .description
             .as_ref()
-            .map(|d| format!("\n  {}", d))
+            .map(|d| format!("\n  {}", d.dimmed()))
             .unwrap_or_default();
-        format!("[{}] {}{}", self.key, self.name, desc)
+        format!(
+            "{} {}{}",
+            format!("[{}]", self.key).cyan(),
+            self.name.bold(),
+            desc
+        )
     }
 }
 
 impl HumanDisplay for Issue {
     fn human_fmt(&self) -> String {
-        let mut parts = vec![format!("{} {}", self.identifier, self.title)];
+        let identifier = self.identifier.bold().cyan();
+        let mut parts = vec![format!("{} {}", identifier, self.title)];
 
         if let Some(state) = &self.state {
-            parts.push(format!("  Status: {}", state.name));
+            // Color status based on workflow state type
+            let status_colored = match state.type_.as_str() {
+                "completed" => state.name.green(),
+                "canceled" => state.name.red().dimmed(),
+                "started" => state.name.yellow(),
+                "backlog" | "unstarted" => state.name.dimmed(),
+                _ => state.name.normal(),
+            };
+            parts.push(format!("  {}: {}", "Status".dimmed(), status_colored));
         }
 
-        let priority_str = match self.priority {
+        // Color priority based on level
+        let priority_colored = match self.priority {
             0 => None,
-            1 => Some("Urgent"),
-            2 => Some("High"),
-            3 => Some("Normal"),
-            4 => Some("Low"),
-            _ => Some("Unknown"),
+            1 => Some("Urgent".red().bold()),
+            2 => Some("High".yellow()),
+            3 => Some("Normal".normal()),
+            4 => Some("Low".dimmed()),
+            _ => Some("Unknown".normal()),
         };
-        if let Some(p) = priority_str {
-            parts.push(format!("  Priority: {}", p));
+        if let Some(p) = priority_colored {
+            parts.push(format!("  {}: {}", "Priority".dimmed(), p));
         }
 
         if let Some(assignee) = &self.assignee {
-            parts.push(format!("  Assignee: {}", assignee.name));
+            parts.push(format!("  {}: {}", "Assignee".dimmed(), assignee.name));
         }
 
         if let Some(team) = &self.team {
-            parts.push(format!("  Team: {}", team.name));
+            parts.push(format!("  {}: {}", "Team".dimmed(), team.name));
         }
 
         parts.join("\n")
@@ -113,7 +147,7 @@ impl HumanDisplay for Issue {
 impl<T: HumanDisplay> HumanDisplay for Vec<T> {
     fn human_fmt(&self) -> String {
         if self.is_empty() {
-            "No results found.".to_string()
+            "No results found.".dimmed().to_string()
         } else {
             self.iter()
                 .map(|item| item.human_fmt())
@@ -185,7 +219,7 @@ pub fn output_error(error: &LinError) -> ! {
 pub fn output_error_with_format(error: &LinError, format: OutputFormat) -> ! {
     match format {
         OutputFormat::Human => {
-            eprintln!("Error: {}", error);
+            eprintln!("{}: {}", "Error".red().bold(), error);
         }
         OutputFormat::Json => {
             let response = ErrorResponse {

@@ -7,7 +7,7 @@ use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
 use lin::commands::{issue, org, team, user};
 use lin::config::Config;
-use lin::output::{output_error_with_format, output_success, OutputFormat};
+use lin::output::{init_colors, output_error_with_format, output_success, OutputFormat};
 use serde::Serialize;
 
 /// lin - A command-line interface for Linear
@@ -211,6 +211,9 @@ struct PlaceholderResponse {
 fn main() {
     let cli = Cli::parse();
     let format = OutputFormat::from_json_flag(cli.json);
+
+    // Initialize color support (respects NO_COLOR env and TTY detection)
+    init_colors();
 
     if let Err(err) = run(cli, format) {
         output_error_with_format(&err, format);
