@@ -4,62 +4,67 @@
 
 use crate::api::{queries, GraphQLClient};
 use crate::models::{TeamResponse, TeamsResponse};
-use crate::output::output_success;
+use crate::output::{output, OutputFormat};
 use crate::Result;
 
 /// List all teams in the organization.
 ///
-/// Fetches teams from the Linear API and outputs them as a JSON array.
+/// Fetches teams from the Linear API and outputs them.
 ///
 /// # Arguments
 ///
 /// * `client` - The GraphQL client to use for the API request
+/// * `format` - The output format (Human or Json)
 ///
 /// # Example
 ///
 /// ```ignore
 /// use lin::api::GraphQLClient;
 /// use lin::commands::team::list_teams;
+/// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
-/// list_teams(&client)?;
+/// list_teams(&client, OutputFormat::Human)?;
 /// ```
-pub fn list_teams(client: &GraphQLClient) -> Result<()> {
+pub fn list_teams(client: &GraphQLClient, format: OutputFormat) -> Result<()> {
     let response: TeamsResponse = client.query(queries::TEAMS_QUERY, serde_json::json!({}))?;
-    output_success(&response.teams.nodes);
+    output(&response.teams.nodes, format);
     Ok(())
 }
 
 /// Get details of a specific team by ID.
 ///
-/// Fetches a single team from the Linear API and outputs it as JSON.
+/// Fetches a single team from the Linear API and outputs it.
 ///
 /// # Arguments
 ///
 /// * `client` - The GraphQL client to use for the API request
 /// * `id` - The team's unique identifier
+/// * `format` - The output format (Human or Json)
 ///
 /// # Example
 ///
 /// ```ignore
 /// use lin::api::GraphQLClient;
 /// use lin::commands::team::get_team;
+/// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
-/// get_team(&client, "team-123")?;
+/// get_team(&client, "team-123", OutputFormat::Human)?;
 /// ```
-pub fn get_team(client: &GraphQLClient, id: &str) -> Result<()> {
+pub fn get_team(client: &GraphQLClient, id: &str, format: OutputFormat) -> Result<()> {
     let variables = serde_json::json!({
         "id": id
     });
     let response: TeamResponse = client.query(queries::TEAM_QUERY, variables)?;
-    output_success(&response.team);
+    output(&response.team, format);
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::GraphQLClient;
 
     #[test]
     fn test_list_teams_success() {
@@ -101,7 +106,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = list_teams(&client);
+        let result = list_teams(&client, OutputFormat::Human);
 
         // Verify success
         assert!(result.is_ok());
@@ -135,7 +140,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = list_teams(&client);
+        let result = list_teams(&client, OutputFormat::Human);
 
         // Verify success (empty list is still valid)
         assert!(result.is_ok());
@@ -170,7 +175,7 @@ mod tests {
         let client = GraphQLClient::with_url("invalid-token", &server.url());
 
         // Make request
-        let result = list_teams(&client);
+        let result = list_teams(&client, OutputFormat::Human);
 
         // Verify error
         assert!(result.is_err());
@@ -197,7 +202,7 @@ mod tests {
         let client = GraphQLClient::with_url("invalid-token", &server.url());
 
         // Make request
-        let result = list_teams(&client);
+        let result = list_teams(&client, OutputFormat::Human);
 
         // Verify error
         assert!(result.is_err());
@@ -238,7 +243,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = get_team(&client, "team-123");
+        let result = get_team(&client, "team-123", OutputFormat::Human);
 
         // Verify success
         assert!(result.is_ok());
@@ -275,7 +280,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = get_team(&client, "team-456");
+        let result = get_team(&client, "team-456", OutputFormat::Human);
 
         // Verify success
         assert!(result.is_ok());
@@ -310,7 +315,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = get_team(&client, "nonexistent-team");
+        let result = get_team(&client, "nonexistent-team", OutputFormat::Human);
 
         // Verify error
         assert!(result.is_err());
@@ -347,7 +352,7 @@ mod tests {
         let client = GraphQLClient::with_url("invalid-token", &server.url());
 
         // Make request
-        let result = get_team(&client, "team-123");
+        let result = get_team(&client, "team-123", OutputFormat::Human);
 
         // Verify error
         assert!(result.is_err());
@@ -374,7 +379,7 @@ mod tests {
         let client = GraphQLClient::with_url("test-token", &server.url());
 
         // Make request
-        let result = get_team(&client, "team-123");
+        let result = get_team(&client, "team-123", OutputFormat::Human);
 
         // Verify error
         assert!(result.is_err());

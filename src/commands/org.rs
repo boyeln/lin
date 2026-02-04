@@ -8,7 +8,7 @@ use std::io::{self, BufRead, Write};
 use serde::Serialize;
 
 use crate::config::Config;
-use crate::output::output_success;
+use crate::output::{output_success, HumanDisplay, OutputFormat};
 use crate::Result;
 
 /// Response for the org add command.
@@ -47,6 +47,56 @@ pub struct OrgSetDefaultResponse {
     pub organization: String,
 }
 
+impl HumanDisplay for OrgAddResponse {
+    fn human_fmt(&self) -> String {
+        self.message.clone()
+    }
+}
+
+impl HumanDisplay for OrgRemoveResponse {
+    fn human_fmt(&self) -> String {
+        self.message.clone()
+    }
+}
+
+impl HumanDisplay for OrgListResponse {
+    fn human_fmt(&self) -> String {
+        if self.organizations.is_empty() {
+            "No organizations configured.".to_string()
+        } else {
+            self.organizations
+                .iter()
+                .map(|org| {
+                    if org.is_default {
+                        format!("* {} (default)", org.name)
+                    } else {
+                        format!("  {}", org.name)
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+    }
+}
+
+impl HumanDisplay for OrgSetDefaultResponse {
+    fn human_fmt(&self) -> String {
+        self.message.clone()
+    }
+}
+
+/// Output an org response with the appropriate format.
+fn output_org<T: Serialize + HumanDisplay>(data: &T, format: OutputFormat) {
+    match format {
+        OutputFormat::Human => {
+            println!("{}", data.human_fmt());
+        }
+        OutputFormat::Json => {
+            output_success(data);
+        }
+    }
+}
+
 /// Add an organization to the configuration.
 ///
 /// Reads the API token from stdin to allow piping tokens securely.
@@ -54,13 +104,14 @@ pub struct OrgSetDefaultResponse {
 /// # Arguments
 ///
 /// * `name` - The name to identify this organization
+/// * `format` - The output format (Human or Json)
 ///
 /// # Example
 ///
 /// ```bash
 /// echo "lin_api_xxxxx" | lin org add my-company
 /// ```
-pub fn add_org(name: &str) -> Result<()> {
+pub fn add_org(name: &str, format: OutputFormat) -> Result<()> {
     // Read token from stdin
     let token = read_token_from_stdin()?;
 
@@ -79,7 +130,7 @@ pub fn add_org(name: &str) -> Result<()> {
         is_default: is_first || config.default_org.as_deref() == Some(name),
     };
 
-    output_success(&response);
+    output_org(&response, format);
     Ok(())
 }
 
@@ -88,7 +139,8 @@ pub fn add_org(name: &str) -> Result<()> {
 /// # Arguments
 ///
 /// * `name` - The name of the organization to remove
-pub fn remove_org(name: &str) -> Result<()> {
+/// * `format` - The output format (Human or Json)
+pub fn remove_org(name: &str, format: OutputFormat) -> Result<()> {
     let mut config = Config::load()?;
     config.remove_org(name)?;
     config.save()?;
@@ -98,12 +150,16 @@ pub fn remove_org(name: &str) -> Result<()> {
         organization: name.to_string(),
     };
 
-    output_success(&response);
+    output_org(&response, format);
     Ok(())
 }
 
 /// List all configured organizations.
-pub fn list_orgs() -> Result<()> {
+///
+/// # Arguments
+///
+/// * `format` - The output format (Human or Json)
+pub fn list_orgs(format: OutputFormat) -> Result<()> {
     let config = Config::load()?;
 
     let organizations: Vec<OrgInfo> = config
@@ -120,7 +176,7 @@ pub fn list_orgs() -> Result<()> {
         default_org: config.default_org.clone(),
     };
 
-    output_success(&response);
+    output_org(&response, format);
     Ok(())
 }
 
@@ -129,7 +185,8 @@ pub fn list_orgs() -> Result<()> {
 /// # Arguments
 ///
 /// * `name` - The name of the organization to set as default
-pub fn set_default_org(name: &str) -> Result<()> {
+/// * `format` - The output format (Human or Json)
+pub fn set_default_org(name: &str, format: OutputFormat) -> Result<()> {
     let mut config = Config::load()?;
     config.set_default(name)?;
     config.save()?;
@@ -139,7 +196,7 @@ pub fn set_default_org(name: &str) -> Result<()> {
         organization: name.to_string(),
     };
 
-    output_success(&response);
+    output_org(&response, format);
     Ok(())
 }
 
