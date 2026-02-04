@@ -40,7 +40,11 @@ pub const LINEAR_API_TOKEN_ENV: &str = "LINEAR_API_TOKEN";
 /// let config = Config::load()?;
 /// let token = get_api_token(None, &config, None)?;
 /// ```
-pub fn get_api_token(cli_token: Option<&str>, config: &Config, org: Option<&str>) -> Result<String> {
+pub fn get_api_token(
+    cli_token: Option<&str>,
+    config: &Config,
+    org: Option<&str>,
+) -> Result<String> {
     // Priority 1: CLI --api-token flag
     if let Some(token) = cli_token {
         return Ok(token.to_string());
@@ -78,7 +82,7 @@ pub fn require_api_token(
             "No API token found. Provide a token using one of these methods:\n\
              1. Use --api-token flag: lin --api-token <token> <command>\n\
              2. Set LINEAR_API_TOKEN environment variable\n\
-             3. Add an organization: lin org add <name>"
+             3. Add an organization: lin org add <name>",
         )
     })
 }

@@ -203,9 +203,9 @@ impl GraphQLClient {
         }
 
         // Return the data
-        graphql_response.data.ok_or_else(|| {
-            LinError::api("GraphQL response contained no data".to_string())
-        })
+        graphql_response
+            .data
+            .ok_or_else(|| LinError::api("GraphQL response contained no data".to_string()))
     }
 }
 
@@ -287,7 +287,10 @@ mod integration_tests {
 
         // Make request
         let result: ViewerResponse = client
-            .query("query { viewer { id name email displayName active } }", serde_json::json!({}))
+            .query(
+                "query { viewer { id name email displayName active } }",
+                serde_json::json!({}),
+            )
             .expect("Query should succeed");
 
         // Verify response
@@ -504,7 +507,7 @@ mod integration_tests {
         // Set up mock that specifically checks the token is sent WITHOUT "Bearer" prefix
         let mock = server
             .mock("POST", "/")
-            .match_header("authorization", "lin_api_xxxxx")  // Just the token, no "Bearer"
+            .match_header("authorization", "lin_api_xxxxx") // Just the token, no "Bearer"
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -570,7 +573,10 @@ mod integration_tests {
             "filter": {"teamId": "team-123"}
         });
         let result: ViewerResponse = client
-            .query("query($first: Int) { viewer { id name email displayName active } }", variables)
+            .query(
+                "query($first: Int) { viewer { id name email displayName active } }",
+                variables,
+            )
             .expect("Query should succeed");
 
         // Verify response
