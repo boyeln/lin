@@ -4,6 +4,7 @@
 //! separated from the argument parsing in main.rs.
 
 pub mod comment;
+pub mod cycle;
 pub mod issue;
 pub mod org;
 pub mod project;

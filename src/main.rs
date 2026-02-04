@@ -5,7 +5,7 @@
 use clap::{Parser, Subcommand};
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
-use lin::commands::{comment, issue, org, project, team, user, workflow};
+use lin::commands::{comment, cycle, issue, org, project, team, user, workflow};
 use lin::config::Config;
 use lin::output::{init_colors, output_error_with_format, output_success, OutputFormat};
 use serde::Serialize;
@@ -75,6 +75,11 @@ enum Commands {
         #[command(subcommand)]
         command: ProjectCommands,
     },
+    /// Manage cycles (sprints)
+    Cycle {
+        #[command(subcommand)]
+        command: CycleCommands,
+    },
 }
 
 /// Issue-related subcommands.
@@ -84,7 +89,8 @@ enum IssueCommands {
     #[command(after_help = "EXAMPLES:\n  \
     lin issue list --team ENG --assignee me\n  \
     lin issue list --state \"In Progress\" --limit 10\n  \
-    lin issue list --project <project-id>")]
+    lin issue list --project <project-id>\n  \
+    lin issue list --cycle <cycle-id>")]
     List {
         /// Filter by team identifier
         #[arg(long)]
@@ -98,6 +104,9 @@ enum IssueCommands {
         /// Filter by project ID
         #[arg(long)]
         project: Option<String>,
+        /// Filter by cycle ID
+        #[arg(long)]
+        cycle: Option<String>,
         /// Maximum number of issues to return
         #[arg(long, default_value = "50")]
         limit: u32,
@@ -255,6 +264,27 @@ enum ProjectCommands {
     },
 }
 
+/// Cycle (sprint) related subcommands.
+#[derive(Subcommand, Debug)]
+enum CycleCommands {
+    /// List cycles for a team
+    #[command(after_help = "EXAMPLES:\n  \
+    lin cycle list --team <team-id>\n  \
+    lin cycle list --team ENG")]
+    List {
+        /// Team ID (UUID) or team key (e.g., "ENG")
+        #[arg(long)]
+        team: String,
+    },
+    /// Get details of a specific cycle including its issues
+    #[command(after_help = "EXAMPLES:\n  \
+    lin cycle get <cycle-id>")]
+    Get {
+        /// Cycle ID
+        id: String,
+    },
+}
+
 /// User-related subcommands.
 #[derive(Subcommand, Debug)]
 enum UserCommands {
@@ -337,6 +367,7 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
                 Commands::User { command } => handle_user_command(command, &token, format),
                 Commands::Workflow { command } => handle_workflow_command(command, &token, format),
                 Commands::Project { command } => handle_project_command(command, &token, format),
+                Commands::Cycle { command } => handle_cycle_command(command, &token, format),
                 Commands::Org { .. } => unreachable!(),
             }
         }
@@ -356,6 +387,7 @@ fn handle_issue_command(
             assignee,
             state,
             project,
+            cycle,
             limit,
         } => {
             // If assignee is "me", we need to fetch the viewer ID first
@@ -372,6 +404,7 @@ fn handle_issue_command(
                 assignee,
                 state,
                 project,
+                cycle,
                 limit: Some(limit as i32),
             };
             issue::list_issues(&client, viewer_id.as_deref(), options, format)
@@ -489,6 +522,19 @@ fn handle_project_command(
             project::list_projects(&client, options, format)
         }
         ProjectCommands::Get { id } => project::get_project(&client, &id, format),
+    }
+}
+
+fn handle_cycle_command(
+    command: CycleCommands,
+    token: &str,
+    format: OutputFormat,
+) -> lin::Result<()> {
+    let client = GraphQLClient::new(token);
+
+    match command {
+        CycleCommands::List { team } => cycle::list_cycles(&client, &team, format),
+        CycleCommands::Get { id } => cycle::get_cycle(&client, &id, format),
     }
 }
 

@@ -95,6 +95,16 @@ lin project get <project-id>
 # List issues filtered by project
 lin issue list --project <project-id>
 
+# List issues filtered by cycle
+lin issue list --cycle <cycle-id>
+
+# List cycles for a team
+lin cycle list --team <team-id>
+lin cycle list --team ENG
+
+# Get details of a specific cycle (includes issues)
+lin cycle get <cycle-id>
+
 # Manage organizations
 lin org list
 lin org add <name>
@@ -127,7 +137,7 @@ lin org set-default <name>
 | Archive/unarchive | ✅ | Archive or unarchive issues |
 | Comments | ❌ | Add/list comments on issues |
 | Projects | ✅ | List projects, get project details, filter issues by project |
-| Cycles/Sprints | ❌ | View and manage cycles |
+| Cycles/Sprints | ✅ | List cycles, get cycle details with issues, filter issues by cycle |
 | Labels | ❌ | Manage issue labels |
 | Workflow states | ✅ | List workflow states for a team |
 | Documents | ❌ | Create/manage documents |

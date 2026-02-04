@@ -24,6 +24,8 @@ pub struct IssueListOptions {
     pub state: Option<String>,
     /// Filter by project ID.
     pub project: Option<String>,
+    /// Filter by cycle ID.
+    pub cycle: Option<String>,
     /// Maximum number of issues to return (default 50).
     pub limit: Option<i32>,
 }
@@ -254,6 +256,14 @@ pub fn list_issues(
         filter.insert(
             "project".to_string(),
             serde_json::json!({ "id": { "eq": project_id } }),
+        );
+    }
+
+    // Add cycle filter if specified
+    if let Some(cycle_id) = &options.cycle {
+        filter.insert(
+            "cycle".to_string(),
+            serde_json::json!({ "id": { "eq": cycle_id } }),
         );
     }
 
@@ -1181,6 +1191,7 @@ mod tests {
             assignee: Some("user-456".to_string()),
             state: Some("Done".to_string()),
             project: Some("project-789".to_string()),
+            cycle: None,
             limit: Some(25),
         };
 
