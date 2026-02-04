@@ -30,6 +30,14 @@ pub struct IssueListOptions {
     pub label: Option<String>,
     /// Maximum number of issues to return (default 50).
     pub limit: Option<i32>,
+    /// Filter issues created after this date (YYYY-MM-DD format).
+    pub created_after: Option<String>,
+    /// Filter issues created before this date (YYYY-MM-DD format).
+    pub created_before: Option<String>,
+    /// Filter issues updated after this date (YYYY-MM-DD format).
+    pub updated_after: Option<String>,
+    /// Filter issues updated before this date (YYYY-MM-DD format).
+    pub updated_before: Option<String>,
 }
 
 /// Options for creating a new issue.
@@ -278,6 +286,36 @@ pub fn list_issues(
         filter.insert(
             "labels".to_string(),
             serde_json::json!({ "id": { "eq": label_id } }),
+        );
+    }
+
+    // Add createdAt date filters
+    let mut created_at_filter = serde_json::Map::new();
+    if let Some(created_after) = &options.created_after {
+        created_at_filter.insert("gt".to_string(), serde_json::json!(created_after));
+    }
+    if let Some(created_before) = &options.created_before {
+        created_at_filter.insert("lt".to_string(), serde_json::json!(created_before));
+    }
+    if !created_at_filter.is_empty() {
+        filter.insert(
+            "createdAt".to_string(),
+            serde_json::Value::Object(created_at_filter),
+        );
+    }
+
+    // Add updatedAt date filters
+    let mut updated_at_filter = serde_json::Map::new();
+    if let Some(updated_after) = &options.updated_after {
+        updated_at_filter.insert("gt".to_string(), serde_json::json!(updated_after));
+    }
+    if let Some(updated_before) = &options.updated_before {
+        updated_at_filter.insert("lt".to_string(), serde_json::json!(updated_before));
+    }
+    if !updated_at_filter.is_empty() {
+        filter.insert(
+            "updatedAt".to_string(),
+            serde_json::Value::Object(updated_at_filter),
         );
     }
 
@@ -1216,6 +1254,7 @@ mod tests {
             cycle: None,
             label: None,
             limit: Some(25),
+            ..Default::default()
         };
 
         let result = list_issues(&client, None, options, OutputFormat::Human);
@@ -2538,6 +2577,228 @@ mod tests {
         assert!(result.is_err());
         let err = result.unwrap_err();
         assert!(err.to_string().contains("not found"));
+        mock.assert();
+    }
+
+    // =============================================================================
+    // Date filter tests
+    // =============================================================================
+
+    #[test]
+    fn test_list_issues_with_created_after_filter() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            created_after: Some("2024-01-01".to_string()),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_created_before_filter() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            created_before: Some("2024-12-31".to_string()),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_updated_after_filter() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            updated_after: Some("2024-06-01".to_string()),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_updated_before_filter() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            updated_before: Some("2024-06-30".to_string()),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_date_range_filter() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            created_after: Some("2024-01-01".to_string()),
+            created_before: Some("2024-06-30".to_string()),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_all_date_filters() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            created_after: Some("2024-01-01".to_string()),
+            created_before: Some("2024-12-31".to_string()),
+            updated_after: Some("2024-06-01".to_string()),
+            updated_before: Some("2024-06-30".to_string()),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_issues_with_date_and_other_filters() {
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "issues": {
+                            "nodes": []
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let options = IssueListOptions {
+            team: Some("ENG".to_string()),
+            state: Some("In Progress".to_string()),
+            created_after: Some("2024-01-01".to_string()),
+            updated_before: Some("2024-12-31".to_string()),
+            limit: Some(25),
+            ..Default::default()
+        };
+
+        let result = list_issues(&client, None, options, OutputFormat::Human);
+        assert!(result.is_ok());
         mock.assert();
     }
 }

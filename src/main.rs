@@ -130,7 +130,9 @@ enum IssueCommands {
     lin issue list --state \"In Progress\" --limit 10\n  \
     lin issue list --project <project-id>\n  \
     lin issue list --cycle <cycle-id>\n  \
-    lin issue list --label <label-id>")]
+    lin issue list --label <label-id>\n  \
+    lin issue list --created-after 2024-01-01\n  \
+    lin issue list --updated-before 2024-12-31")]
     List {
         /// Filter by team identifier
         #[arg(long)]
@@ -153,6 +155,18 @@ enum IssueCommands {
         /// Maximum number of issues to return
         #[arg(long, default_value = "50")]
         limit: u32,
+        /// Filter issues created after this date (YYYY-MM-DD)
+        #[arg(long)]
+        created_after: Option<String>,
+        /// Filter issues created before this date (YYYY-MM-DD)
+        #[arg(long)]
+        created_before: Option<String>,
+        /// Filter issues updated after this date (YYYY-MM-DD)
+        #[arg(long)]
+        updated_after: Option<String>,
+        /// Filter issues updated before this date (YYYY-MM-DD)
+        #[arg(long)]
+        updated_before: Option<String>,
     },
     /// Get details of a specific issue
     #[command(after_help = "EXAMPLES:\n  \
@@ -597,6 +611,10 @@ fn handle_issue_command(
             cycle,
             label,
             limit,
+            created_after,
+            created_before,
+            updated_after,
+            updated_before,
         } => {
             // If assignee is "me", we need to fetch the viewer ID first
             let viewer_id = if assignee.as_deref() == Some("me") {
@@ -615,6 +633,10 @@ fn handle_issue_command(
                 cycle,
                 label,
                 limit: Some(limit as i32),
+                created_after,
+                created_before,
+                updated_after,
+                updated_before,
             };
             issue::list_issues(&client, viewer_id.as_deref(), options, format)
         }
