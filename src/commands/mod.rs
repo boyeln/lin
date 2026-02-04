@@ -6,6 +6,7 @@
 pub mod comment;
 pub mod cycle;
 pub mod issue;
+pub mod label;
 pub mod org;
 pub mod project;
 pub mod team;

@@ -105,6 +105,24 @@ lin cycle list --team ENG
 # Get details of a specific cycle (includes issues)
 lin cycle get <cycle-id>
 
+# List all labels in the workspace
+lin label list
+
+# List labels for a specific team
+lin label list --team <team-id>
+
+# Get details of a specific label
+lin label get <label-id>
+
+# List issues filtered by label
+lin issue list --label <label-id>
+
+# Create an issue with labels
+lin issue create --team <team-id> --title "New feature" --labels <label-id1> --labels <label-id2>
+
+# Update an issue's labels
+lin issue update ENG-123 --labels <label-id1> --labels <label-id2>
+
 # Manage organizations
 lin org list
 lin org add <name>
@@ -138,7 +156,7 @@ lin org set-default <name>
 | Comments | ❌ | Add/list comments on issues |
 | Projects | ✅ | List projects, get project details, filter issues by project |
 | Cycles/Sprints | ✅ | List cycles, get cycle details with issues, filter issues by cycle |
-| Labels | ❌ | Manage issue labels |
+| Labels | ✅ | List labels, get label details, filter issues by label, add labels to issues |
 | Workflow states | ✅ | List workflow states for a team |
 | Documents | ❌ | Create/manage documents |
 | File uploads | ❌ | Upload attachments |

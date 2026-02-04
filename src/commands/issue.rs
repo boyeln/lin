@@ -26,6 +26,8 @@ pub struct IssueListOptions {
     pub project: Option<String>,
     /// Filter by cycle ID.
     pub cycle: Option<String>,
+    /// Filter by label ID.
+    pub label: Option<String>,
     /// Maximum number of issues to return (default 50).
     pub limit: Option<i32>,
 }
@@ -45,6 +47,8 @@ pub struct IssueCreateOptions {
     pub state_id: Option<String>,
     /// Priority level (0=none, 1=urgent, 2=high, 3=normal, 4=low).
     pub priority: Option<i32>,
+    /// Label IDs to add to the issue.
+    pub label_ids: Option<Vec<String>>,
 }
 
 /// Options for updating an existing issue.
@@ -60,6 +64,8 @@ pub struct IssueUpdateOptions {
     pub state_id: Option<String>,
     /// New priority level (0=none, 1=urgent, 2=high, 3=normal, 4=low).
     pub priority: Option<i32>,
+    /// Label IDs to set on the issue (replaces existing labels).
+    pub label_ids: Option<Vec<String>>,
 }
 
 /// Check if a string looks like a UUID.
@@ -264,6 +270,14 @@ pub fn list_issues(
         filter.insert(
             "cycle".to_string(),
             serde_json::json!({ "id": { "eq": cycle_id } }),
+        );
+    }
+
+    // Add label filter if specified
+    if let Some(label_id) = &options.label {
+        filter.insert(
+            "labels".to_string(),
+            serde_json::json!({ "id": { "eq": label_id } }),
         );
     }
 
@@ -488,6 +502,10 @@ pub fn create_issue(
         input.insert("priority".to_string(), serde_json::json!(priority));
     }
 
+    if let Some(label_ids) = options.label_ids {
+        input.insert("labelIds".to_string(), serde_json::json!(label_ids));
+    }
+
     let variables = serde_json::json!({
         "input": input
     });
@@ -590,6 +608,10 @@ pub fn update_issue(
 
     if let Some(priority) = options.priority {
         input.insert("priority".to_string(), serde_json::json!(priority));
+    }
+
+    if let Some(label_ids) = options.label_ids {
+        input.insert("labelIds".to_string(), serde_json::json!(label_ids));
     }
 
     let variables = serde_json::json!({
@@ -1192,6 +1214,7 @@ mod tests {
             state: Some("Done".to_string()),
             project: Some("project-789".to_string()),
             cycle: None,
+            label: None,
             limit: Some(25),
         };
 
@@ -1579,6 +1602,7 @@ mod tests {
             assignee_id: None,
             state_id: None,
             priority: None,
+            label_ids: None,
         };
 
         let result = create_issue(&client, options, OutputFormat::Human);
@@ -1642,6 +1666,7 @@ mod tests {
             assignee_id: Some("user-1".to_string()),
             state_id: Some("state-1".to_string()),
             priority: Some(2),
+            label_ids: None,
         };
 
         let result = create_issue(&client, options, OutputFormat::Human);
@@ -1677,6 +1702,7 @@ mod tests {
             assignee_id: None,
             state_id: None,
             priority: None,
+            label_ids: None,
         };
 
         let result = create_issue(&client, options, OutputFormat::Human);
@@ -1714,6 +1740,7 @@ mod tests {
             assignee_id: None,
             state_id: None,
             priority: None,
+            label_ids: None,
         };
 
         let result = create_issue(&client, options, OutputFormat::Human);
@@ -1776,6 +1803,7 @@ mod tests {
             assignee_id: None,
             state_id: Some("state-2".to_string()),
             priority: Some(1),
+            label_ids: None,
         };
 
         let result = update_issue(
@@ -1989,6 +2017,7 @@ mod tests {
             assignee_id: None,
             state_id: None,
             priority: Some(3),
+            label_ids: None,
         };
 
         let result = update_issue(

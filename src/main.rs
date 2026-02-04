@@ -5,7 +5,7 @@
 use clap::{Parser, Subcommand};
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
-use lin::commands::{comment, cycle, issue, org, project, team, user, workflow};
+use lin::commands::{comment, cycle, issue, label, org, project, team, user, workflow};
 use lin::config::Config;
 use lin::output::{init_colors, output_error_with_format, output_success, OutputFormat};
 use serde::Serialize;
@@ -80,6 +80,11 @@ enum Commands {
         #[command(subcommand)]
         command: CycleCommands,
     },
+    /// Manage labels
+    Label {
+        #[command(subcommand)]
+        command: LabelCommands,
+    },
 }
 
 /// Issue-related subcommands.
@@ -90,7 +95,8 @@ enum IssueCommands {
     lin issue list --team ENG --assignee me\n  \
     lin issue list --state \"In Progress\" --limit 10\n  \
     lin issue list --project <project-id>\n  \
-    lin issue list --cycle <cycle-id>")]
+    lin issue list --cycle <cycle-id>\n  \
+    lin issue list --label <label-id>")]
     List {
         /// Filter by team identifier
         #[arg(long)]
@@ -107,6 +113,9 @@ enum IssueCommands {
         /// Filter by cycle ID
         #[arg(long)]
         cycle: Option<String>,
+        /// Filter by label ID
+        #[arg(long)]
+        label: Option<String>,
         /// Maximum number of issues to return
         #[arg(long, default_value = "50")]
         limit: u32,
@@ -124,7 +133,8 @@ enum IssueCommands {
     },
     /// Create a new issue
     #[command(after_help = "EXAMPLES:\n  \
-    lin issue create --team <team-id> --title \"Fix bug\" --priority 2")]
+    lin issue create --team <team-id> --title \"Fix bug\" --priority 2\n  \
+    lin issue create --team <team-id> --title \"New feature\" --labels <label-id1> --labels <label-id2>")]
     Create {
         /// Issue title
         #[arg(long)]
@@ -144,11 +154,15 @@ enum IssueCommands {
         /// Priority (0-4: 0=none, 1=urgent, 2=high, 3=normal, 4=low)
         #[arg(long)]
         priority: Option<u8>,
+        /// Label IDs to add to the issue (can be specified multiple times)
+        #[arg(long)]
+        labels: Option<Vec<String>>,
     },
     /// Update an existing issue
     #[command(after_help = "EXAMPLES:\n  \
     lin issue update ENG-123 --title \"New title\"\n  \
-    lin issue update ENG-123 --state <state-id> --priority 1")]
+    lin issue update ENG-123 --state <state-id> --priority 1\n  \
+    lin issue update ENG-123 --labels <label-id1> --labels <label-id2>")]
     Update {
         /// Issue identifier (e.g., "ENG-123") or UUID
         identifier: String,
@@ -167,6 +181,9 @@ enum IssueCommands {
         /// New priority (0-4: 0=none, 1=urgent, 2=high, 3=normal, 4=low)
         #[arg(long)]
         priority: Option<u8>,
+        /// Label IDs to set on the issue (replaces existing labels, can be specified multiple times)
+        #[arg(long)]
+        labels: Option<Vec<String>>,
     },
     /// Delete an issue
     #[command(after_help = "EXAMPLES:\n  \
@@ -285,6 +302,27 @@ enum CycleCommands {
     },
 }
 
+/// Label-related subcommands.
+#[derive(Subcommand, Debug)]
+enum LabelCommands {
+    /// List all labels in the workspace
+    #[command(after_help = "EXAMPLES:\n  \
+    lin label list\n  \
+    lin label list --team <team-id>")]
+    List {
+        /// Filter by team ID to show only team-specific labels (optional)
+        #[arg(long)]
+        team: Option<String>,
+    },
+    /// Get details of a specific label
+    #[command(after_help = "EXAMPLES:\n  \
+    lin label get <label-id>")]
+    Get {
+        /// Label ID
+        id: String,
+    },
+}
+
 /// User-related subcommands.
 #[derive(Subcommand, Debug)]
 enum UserCommands {
@@ -368,6 +406,7 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
                 Commands::Workflow { command } => handle_workflow_command(command, &token, format),
                 Commands::Project { command } => handle_project_command(command, &token, format),
                 Commands::Cycle { command } => handle_cycle_command(command, &token, format),
+                Commands::Label { command } => handle_label_command(command, &token, format),
                 Commands::Org { .. } => unreachable!(),
             }
         }
@@ -388,6 +427,7 @@ fn handle_issue_command(
             state,
             project,
             cycle,
+            label,
             limit,
         } => {
             // If assignee is "me", we need to fetch the viewer ID first
@@ -405,6 +445,7 @@ fn handle_issue_command(
                 state,
                 project,
                 cycle,
+                label,
                 limit: Some(limit as i32),
             };
             issue::list_issues(&client, viewer_id.as_deref(), options, format)
@@ -420,6 +461,7 @@ fn handle_issue_command(
             assignee,
             state,
             priority,
+            labels,
         } => {
             let options = issue::IssueCreateOptions {
                 title,
@@ -428,6 +470,7 @@ fn handle_issue_command(
                 assignee_id: assignee,
                 state_id: state,
                 priority: priority.map(|p| p as i32),
+                label_ids: labels,
             };
             issue::create_issue(&client, options, format)
         }
@@ -438,6 +481,7 @@ fn handle_issue_command(
             assignee,
             state,
             priority,
+            labels,
         } => {
             let options = issue::IssueUpdateOptions {
                 title,
@@ -445,6 +489,7 @@ fn handle_issue_command(
                 assignee_id: assignee,
                 state_id: state,
                 priority: priority.map(|p| p as i32),
+                label_ids: labels,
             };
             issue::update_issue(&client, &identifier, options, format)
         }
@@ -535,6 +580,22 @@ fn handle_cycle_command(
     match command {
         CycleCommands::List { team } => cycle::list_cycles(&client, &team, format),
         CycleCommands::Get { id } => cycle::get_cycle(&client, &id, format),
+    }
+}
+
+fn handle_label_command(
+    command: LabelCommands,
+    token: &str,
+    format: OutputFormat,
+) -> lin::Result<()> {
+    let client = GraphQLClient::new(token);
+
+    match command {
+        LabelCommands::List { team } => {
+            let options = label::LabelListOptions { team_id: team };
+            label::list_labels(&client, options, format)
+        }
+        LabelCommands::Get { id } => label::get_label(&client, &id, format),
     }
 }
 
