@@ -927,6 +927,42 @@ mutation AttachmentCreate($input: AttachmentCreateInput!) {
 }
 "#;
 
+/// Query to list attachments filtered by URL pattern.
+///
+/// This is used to find git-related attachments (branches, PRs) for an issue.
+/// Attachments with URLs matching GitHub/GitLab patterns are considered git links.
+///
+/// Variables:
+/// - `id` (String!): The issue's unique identifier
+///
+/// Returns: `IssueAttachmentsResponse`
+pub const ISSUE_GIT_LINKS_QUERY: &str = r#"
+query IssueGitLinks($id: String!) {
+    issue(id: $id) {
+        id
+        identifier
+        attachments {
+            nodes {
+                id
+                title
+                subtitle
+                url
+                metadata
+                createdAt
+                updatedAt
+                creator {
+                    id
+                    name
+                    email
+                    displayName
+                    active
+                }
+            }
+        }
+    }
+}
+"#;
+
 /// Mutation to create a file upload URL.
 ///
 /// This returns a presigned URL where the file should be uploaded,
@@ -1204,5 +1240,15 @@ mod tests {
         assert!(FILE_UPLOAD_CREATE_MUTATION.contains("$size: Int!"));
         assert!(FILE_UPLOAD_CREATE_MUTATION.contains("uploadUrl"));
         assert!(FILE_UPLOAD_CREATE_MUTATION.contains("assetUrl"));
+    }
+
+    #[test]
+    fn test_issue_git_links_query_is_valid() {
+        assert!(ISSUE_GIT_LINKS_QUERY.contains("query IssueGitLinks"));
+        assert!(ISSUE_GIT_LINKS_QUERY.contains("$id: String!"));
+        assert!(ISSUE_GIT_LINKS_QUERY.contains("issue(id: $id)"));
+        assert!(ISSUE_GIT_LINKS_QUERY.contains("attachments"));
+        assert!(ISSUE_GIT_LINKS_QUERY.contains("nodes"));
+        assert!(ISSUE_GIT_LINKS_QUERY.contains("url"));
     }
 }
