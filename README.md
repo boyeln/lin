@@ -143,6 +143,11 @@ lin issue list --sort updated --order asc     # Oldest updated first
 lin issue list --team ENG --sort priority --order asc
 lin issue list --assignee me --sort updated --order desc
 
+# Filter by priority level (0-4 or: none, urgent, high, normal, low)
+lin issue list --priority urgent
+lin issue list --priority 2
+lin issue list --priority high
+
 # Create an issue with labels
 lin issue create --team <team-id> --title "New feature" --labels <label-id1> --labels <label-id2>
 
@@ -247,7 +252,8 @@ lin issue remove-relation <relation-id>
 | **Advanced Filtering** | | |
 | Date range filters | ✅ | Filter by created/updated date ranges |
 | Sort options | ✅ | Sort by priority, created, updated, or title with asc/desc order |
-| Combined filters | ❌ | Complex filter combinations |
+| Combined filters | ✅ | Combine multiple filters with AND logic |
+| Priority filter | ✅ | Filter by priority level (urgent, high, normal, low, none) |
 | **CLI Experience** | | |
 | Shell completions | ❌ | Bash, zsh, fish completions |
 | Interactive TUI | ❌ | Interactive terminal UI for browsing |
@@ -269,6 +275,48 @@ When creating or updating issues, use these priority values:
 | 2 | High |
 | 3 | Normal/Medium |
 | 4 | Low |
+
+## Combined Filters
+
+All filters in `lin issue list` can be combined together using AND logic. When multiple filters are specified, only issues matching ALL criteria are returned.
+
+### Available Filters
+
+| Filter | Description |
+|--------|-------------|
+| `--team` | Filter by team identifier (e.g., "ENG") |
+| `--assignee` | Filter by assignee (user ID or "me") |
+| `--state` | Filter by state name (e.g., "In Progress") |
+| `--project` | Filter by project ID |
+| `--cycle` | Filter by cycle ID |
+| `--label` | Filter by label ID |
+| `--priority` | Filter by priority (0-4 or: none, urgent, high, normal, low) |
+| `--created-after` | Filter issues created after date (YYYY-MM-DD) |
+| `--created-before` | Filter issues created before date (YYYY-MM-DD) |
+| `--updated-after` | Filter issues updated after date (YYYY-MM-DD) |
+| `--updated-before` | Filter issues updated before date (YYYY-MM-DD) |
+
+### Example Combinations
+
+```bash
+# High priority issues in a specific team assigned to me
+lin issue list --team ENG --assignee me --priority high
+
+# Urgent issues in the Engineering team
+lin issue list --team ENG --priority urgent
+
+# Issues in progress created this month
+lin issue list --state "In Progress" --created-after 2024-01-01 --created-before 2024-01-31
+
+# My urgent issues sorted by creation date
+lin issue list --assignee me --priority urgent --sort created --order desc
+
+# Team issues in a specific project with high priority
+lin issue list --team ENG --project <project-id> --priority high
+
+# All filters combined
+lin issue list --team ENG --assignee me --state "In Progress" --priority high --created-after 2024-01-01 --sort priority --order asc
+```
 
 ## Output Format
 
