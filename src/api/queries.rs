@@ -362,6 +362,175 @@ mutation IssueUnarchive($id: String!) {
 }
 "#;
 
+/// Query to get a single issue with its comments by ID.
+///
+/// Variables:
+/// - `id` (String!): The issue's unique identifier
+///
+/// Returns: `IssueWithCommentsResponse`
+pub const ISSUE_WITH_COMMENTS_QUERY: &str = r#"
+query IssueWithComments($id: String!) {
+    issue(id: $id) {
+        id
+        identifier
+        title
+        description
+        priority
+        createdAt
+        updatedAt
+        state {
+            id
+            name
+            color
+            type
+        }
+        team {
+            id
+            key
+            name
+            description
+        }
+        assignee {
+            id
+            name
+            email
+            displayName
+            active
+        }
+        comments {
+            nodes {
+                id
+                body
+                createdAt
+                updatedAt
+                user {
+                    id
+                    name
+                    email
+                    displayName
+                    active
+                }
+            }
+        }
+    }
+}
+"#;
+
+/// Query to get an issue with comments by its identifier (e.g., "ENG-123").
+///
+/// Variables:
+/// - `filter` (IssueFilter!): Filter containing the identifier
+///
+/// Returns: `IssuesWithCommentsResponse` (with single result)
+pub const ISSUE_BY_IDENTIFIER_WITH_COMMENTS_QUERY: &str = r#"
+query IssueByIdentifierWithComments($filter: IssueFilter!) {
+    issues(filter: $filter, first: 1) {
+        nodes {
+            id
+            identifier
+            title
+            description
+            priority
+            createdAt
+            updatedAt
+            state {
+                id
+                name
+                color
+                type
+            }
+            team {
+                id
+                key
+                name
+                description
+            }
+            assignee {
+                id
+                name
+                email
+                displayName
+                active
+            }
+            comments {
+                nodes {
+                    id
+                    body
+                    createdAt
+                    updatedAt
+                    user {
+                        id
+                        name
+                        email
+                        displayName
+                        active
+                    }
+                }
+            }
+        }
+    }
+}
+"#;
+
+/// Query to get comments for an issue by ID.
+///
+/// Variables:
+/// - `id` (String!): The issue's unique identifier
+///
+/// Returns: `IssueCommentsResponse`
+pub const ISSUE_COMMENTS_QUERY: &str = r#"
+query IssueComments($id: String!) {
+    issue(id: $id) {
+        id
+        identifier
+        comments {
+            nodes {
+                id
+                body
+                createdAt
+                updatedAt
+                user {
+                    id
+                    name
+                    email
+                    displayName
+                    active
+                }
+            }
+        }
+    }
+}
+"#;
+
+/// Mutation to create a comment on an issue.
+///
+/// Variables:
+/// - `input` (CommentCreateInput!): Comment creation input containing:
+///   - `issueId` (String!): The issue ID to comment on
+///   - `body` (String!): The comment body
+///
+/// Returns: `CommentCreateResponse`
+pub const COMMENT_CREATE_MUTATION: &str = r#"
+mutation CommentCreate($input: CommentCreateInput!) {
+    commentCreate(input: $input) {
+        success
+        comment {
+            id
+            body
+            createdAt
+            updatedAt
+            user {
+                id
+                name
+                email
+                displayName
+                active
+            }
+        }
+    }
+}
+"#;
+
 #[cfg(test)]
 mod tests {
     use super::*;

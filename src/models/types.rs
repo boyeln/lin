@@ -81,9 +81,61 @@ pub struct Issue {
     pub updated_at: String,
 }
 
+/// A comment on a Linear issue.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Comment {
+    /// Unique identifier for the comment.
+    pub id: String,
+    /// The comment body/content.
+    pub body: String,
+    /// The user who created the comment.
+    pub user: Option<User>,
+    /// ISO 8601 timestamp of when the comment was created.
+    pub created_at: String,
+    /// ISO 8601 timestamp of when the comment was last updated.
+    pub updated_at: String,
+}
+
+/// An issue with its comments included.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueWithComments {
+    /// Unique identifier for the issue.
+    pub id: String,
+    /// Human-readable identifier (e.g., "ENG-123").
+    pub identifier: String,
+    /// Issue title.
+    pub title: String,
+    /// Issue description (may be empty or null).
+    pub description: Option<String>,
+    /// Priority level (0 = no priority, 1 = urgent, 2 = high, 3 = normal, 4 = low).
+    pub priority: i32,
+    /// Current workflow state.
+    pub state: Option<WorkflowState>,
+    /// Team the issue belongs to.
+    pub team: Option<Team>,
+    /// User assigned to the issue.
+    pub assignee: Option<User>,
+    /// ISO 8601 timestamp of when the issue was created.
+    pub created_at: String,
+    /// ISO 8601 timestamp of when the issue was last updated.
+    pub updated_at: String,
+    /// Comments on the issue.
+    pub comments: CommentConnection,
+}
+
 // =============================================================================
 // Connection Types (for paginated results)
 // =============================================================================
+
+/// A paginated list of comments.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommentConnection {
+    /// List of comments.
+    pub nodes: Vec<Comment>,
+}
 
 /// A paginated list of workflow states.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -187,6 +239,50 @@ pub struct IssueResponse {
     pub issue: Issue,
 }
 
+/// Response wrapper for a single issue with comments query.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueWithCommentsResponse {
+    /// The requested issue with comments.
+    pub issue: IssueWithComments,
+}
+
+/// Response wrapper for issues query returning issues with comments.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssuesWithCommentsResponse {
+    /// Paginated list of issues with comments.
+    pub issues: IssueWithCommentsConnection,
+}
+
+/// A paginated list of issues with comments.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueWithCommentsConnection {
+    /// List of issues with comments.
+    pub nodes: Vec<IssueWithComments>,
+}
+
+/// Response wrapper for comments query on an issue.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueCommentsResponse {
+    /// The issue containing the comments.
+    pub issue: IssueWithCommentsOnly,
+}
+
+/// Issue with only comments (used for fetching just comments).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueWithCommentsOnly {
+    /// Unique identifier for the issue.
+    pub id: String,
+    /// Human-readable identifier (e.g., "ENG-123").
+    pub identifier: String,
+    /// Comments on the issue.
+    pub comments: CommentConnection,
+}
+
 // =============================================================================
 // Mutation Response Wrappers
 // =============================================================================
@@ -273,6 +369,24 @@ pub struct IssueUnarchivePayload {
 pub struct IssueUnarchiveResponse {
     /// The mutation payload.
     pub issue_unarchive: IssueUnarchivePayload,
+}
+
+/// Response for comment creation mutation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommentCreatePayload {
+    /// Whether the mutation was successful.
+    pub success: bool,
+    /// The created comment.
+    pub comment: Option<Comment>,
+}
+
+/// Response wrapper for comment creation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CommentCreateResponse {
+    /// The mutation payload.
+    pub comment_create: CommentCreatePayload,
 }
 
 #[cfg(test)]

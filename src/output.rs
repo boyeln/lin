@@ -7,7 +7,7 @@ use colored::Colorize;
 use serde::Serialize;
 
 use crate::error::LinError;
-use crate::models::{Issue, Team, User, WorkflowState};
+use crate::models::{Comment, Issue, IssueWithComments, Team, User, WorkflowState};
 
 /// Initialize color support based on terminal capabilities.
 ///
@@ -155,6 +155,91 @@ impl HumanDisplay for Issue {
 
         if let Some(team) = &self.team {
             parts.push(format!("  {}: {}", "Team".dimmed(), team.name));
+        }
+
+        parts.join("\n")
+    }
+}
+
+impl HumanDisplay for Comment {
+    fn human_fmt(&self) -> String {
+        let author = self
+            .user
+            .as_ref()
+            .map(|u| u.name.clone())
+            .unwrap_or_else(|| "Unknown".to_string());
+
+        // Format timestamp (show date portion only)
+        let date = if self.created_at.len() >= 10 {
+            &self.created_at[..10]
+        } else {
+            &self.created_at
+        };
+
+        let header = format!("{} {}", author.bold(), date.dimmed());
+
+        // Indent the body for readability
+        let body_lines: Vec<String> = self
+            .body
+            .lines()
+            .map(|line| format!("  {}", line))
+            .collect();
+        let body = body_lines.join("\n");
+
+        format!("{}\n{}", header, body)
+    }
+}
+
+impl HumanDisplay for IssueWithComments {
+    fn human_fmt(&self) -> String {
+        let identifier = self.identifier.bold().cyan();
+        let mut parts = vec![format!("{} {}", identifier, self.title)];
+
+        if let Some(state) = &self.state {
+            let status_colored = match state.type_.as_str() {
+                "completed" => state.name.green(),
+                "canceled" => state.name.red().dimmed(),
+                "started" => state.name.yellow(),
+                "backlog" | "unstarted" => state.name.dimmed(),
+                _ => state.name.normal(),
+            };
+            parts.push(format!("  {}: {}", "Status".dimmed(), status_colored));
+        }
+
+        let priority_colored = match self.priority {
+            0 => None,
+            1 => Some("Urgent".red().bold()),
+            2 => Some("High".yellow()),
+            3 => Some("Normal".normal()),
+            4 => Some("Low".dimmed()),
+            _ => Some("Unknown".normal()),
+        };
+        if let Some(p) = priority_colored {
+            parts.push(format!("  {}: {}", "Priority".dimmed(), p));
+        }
+
+        if let Some(assignee) = &self.assignee {
+            parts.push(format!("  {}: {}", "Assignee".dimmed(), assignee.name));
+        }
+
+        if let Some(team) = &self.team {
+            parts.push(format!("  {}: {}", "Team".dimmed(), team.name));
+        }
+
+        // Add comments section
+        let comment_count = self.comments.nodes.len();
+        parts.push(format!("\n  {} ({})", "Comments".bold(), comment_count));
+
+        if self.comments.nodes.is_empty() {
+            parts.push("  No comments yet.".dimmed().to_string());
+        } else {
+            for comment in &self.comments.nodes {
+                parts.push(String::new()); // blank line before each comment
+                                           // Indent comment output
+                for line in comment.human_fmt().lines() {
+                    parts.push(format!("  {}", line));
+                }
+            }
         }
 
         parts.join("\n")

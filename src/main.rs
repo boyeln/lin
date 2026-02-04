@@ -5,7 +5,7 @@
 use clap::{Parser, Subcommand};
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
-use lin::commands::{issue, org, team, user, workflow};
+use lin::commands::{comment, issue, org, team, user, workflow};
 use lin::config::Config;
 use lin::output::{init_colors, output_error_with_format, output_success, OutputFormat};
 use serde::Serialize;
@@ -44,6 +44,11 @@ enum Commands {
     Issue {
         #[command(subcommand)]
         command: IssueCommands,
+    },
+    /// Manage comments on issues
+    Comment {
+        #[command(subcommand)]
+        command: CommentCommands,
     },
     /// Manage teams
     Team {
@@ -90,10 +95,14 @@ enum IssueCommands {
     },
     /// Get details of a specific issue
     #[command(after_help = "EXAMPLES:\n  \
-    lin issue get ENG-123")]
+    lin issue get ENG-123\n  \
+    lin issue get ENG-123 --with-comments")]
     Get {
         /// Issue identifier (e.g., "ENG-123")
         identifier: String,
+        /// Include comments in the output
+        #[arg(long)]
+        with_comments: bool,
     },
     /// Create a new issue
     #[command(after_help = "EXAMPLES:\n  \
@@ -161,6 +170,28 @@ enum IssueCommands {
     Unarchive {
         /// Issue identifier (e.g., "ENG-123") or UUID
         identifier: String,
+    },
+}
+
+/// Comment-related subcommands.
+#[derive(Subcommand, Debug)]
+enum CommentCommands {
+    /// List comments on an issue
+    #[command(after_help = "EXAMPLES:\n  \
+    lin comment list ENG-123")]
+    List {
+        /// Issue identifier (e.g., "ENG-123") or UUID
+        issue: String,
+    },
+    /// Add a comment to an issue
+    #[command(after_help = "EXAMPLES:\n  \
+    lin comment add ENG-123 --body \"This is my comment\"")]
+    Add {
+        /// Issue identifier (e.g., "ENG-123") or UUID
+        issue: String,
+        /// The comment body/content
+        #[arg(long)]
+        body: String,
     },
 }
 
@@ -271,6 +302,7 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
 
             match cli.command {
                 Commands::Issue { command } => handle_issue_command(command, &token, format),
+                Commands::Comment { command } => handle_comment_command(command, &token, format),
                 Commands::Team { command } => handle_team_command(command, &token, format),
                 Commands::User { command } => handle_user_command(command, &token, format),
                 Commands::Workflow { command } => handle_workflow_command(command, &token, format),
@@ -311,7 +343,10 @@ fn handle_issue_command(
             };
             issue::list_issues(&client, viewer_id.as_deref(), options, format)
         }
-        IssueCommands::Get { identifier } => issue::get_issue(&client, &identifier, format),
+        IssueCommands::Get {
+            identifier,
+            with_comments,
+        } => issue::get_issue_with_comments(&client, &identifier, with_comments, format),
         IssueCommands::Create {
             title,
             team,
@@ -351,6 +386,21 @@ fn handle_issue_command(
         IssueCommands::Archive { identifier } => issue::archive_issue(&client, &identifier, format),
         IssueCommands::Unarchive { identifier } => {
             issue::unarchive_issue(&client, &identifier, format)
+        }
+    }
+}
+
+fn handle_comment_command(
+    command: CommentCommands,
+    token: &str,
+    format: OutputFormat,
+) -> lin::Result<()> {
+    let client = GraphQLClient::new(token);
+
+    match command {
+        CommentCommands::List { issue } => comment::list_comments(&client, &issue, format),
+        CommentCommands::Add { issue, body } => {
+            comment::create_comment(&client, &issue, &body, format)
         }
     }
 }
