@@ -3,7 +3,9 @@
 //! Entry point for the CLI application.
 
 use clap::{Parser, Subcommand, ValueEnum};
-use lin::error::LinError;
+use lin::auth::require_api_token;
+use lin::commands::org;
+use lin::config::Config;
 use lin::output::{output_error, output_success};
 use serde::Serialize;
 
@@ -14,8 +16,12 @@ use serde::Serialize;
 #[command(propagate_version = true)]
 struct Cli {
     /// Linear API token (can also be set via LINEAR_API_TOKEN env var)
-    #[arg(long, global = true, env = "LINEAR_API_TOKEN")]
+    #[arg(long, global = true)]
     api_token: Option<String>,
+
+    /// Organization to use (uses default if not specified)
+    #[arg(long, short, global = true)]
+    org: Option<String>,
 
     /// Output format
     #[arg(long, global = true, default_value = "json")]
@@ -53,7 +59,7 @@ enum Commands {
         #[command(subcommand)]
         command: UserCommands,
     },
-    /// Manage organization settings
+    /// Manage organization configuration
     Org {
         #[command(subcommand)]
         command: OrgCommands,
@@ -141,7 +147,24 @@ enum UserCommands {
 /// Organization-related subcommands.
 #[derive(Subcommand, Debug)]
 enum OrgCommands {
-    /// Get information about the current organization
+    /// Add an organization (reads API token from stdin)
+    Add {
+        /// Name to identify this organization
+        name: String,
+    },
+    /// Remove an organization
+    Remove {
+        /// Name of the organization to remove
+        name: String,
+    },
+    /// List all configured organizations
+    List,
+    /// Set the default organization
+    SetDefault {
+        /// Name of the organization to set as default
+        name: String,
+    },
+    /// Get information about the current Linear organization (requires API token)
     Info,
 }
 
@@ -161,18 +184,25 @@ fn main() {
 }
 
 fn run(cli: Cli) -> lin::Result<()> {
-    // Validate that we have an API token for commands that need it
-    let _token = cli.api_token.as_ref().ok_or_else(|| {
-        LinError::config(
-            "API token is required. Set LINEAR_API_TOKEN environment variable or use --api-token flag."
-        )
-    })?;
+    match &cli.command {
+        // Org commands don't all require an API token
+        Commands::Org { command } => handle_org_command(command, &cli),
+        // All other commands require an API token
+        _ => {
+            let config = Config::load()?;
+            let _token = require_api_token(
+                cli.api_token.as_deref(),
+                &config,
+                cli.org.as_deref(),
+            )?;
 
-    match cli.command {
-        Commands::Issue { command } => handle_issue_command(command),
-        Commands::Team { command } => handle_team_command(command),
-        Commands::User { command } => handle_user_command(command),
-        Commands::Org { command } => handle_org_command(command),
+            match cli.command {
+                Commands::Issue { command } => handle_issue_command(command),
+                Commands::Team { command } => handle_team_command(command),
+                Commands::User { command } => handle_user_command(command),
+                Commands::Org { .. } => unreachable!(),
+            }
+        }
     }
 }
 
@@ -229,13 +259,27 @@ fn handle_user_command(command: UserCommands) -> lin::Result<()> {
     Ok(())
 }
 
-fn handle_org_command(command: OrgCommands) -> lin::Result<()> {
-    let response = match command {
-        OrgCommands::Info => PlaceholderResponse {
-            message: "Command not yet implemented",
-            command: "org info".into(),
-        },
-    };
-    output_success(&response);
-    Ok(())
+fn handle_org_command(command: &OrgCommands, cli: &Cli) -> lin::Result<()> {
+    match command {
+        OrgCommands::Add { name } => org::add_org(name),
+        OrgCommands::Remove { name } => org::remove_org(name),
+        OrgCommands::List => org::list_orgs(),
+        OrgCommands::SetDefault { name } => org::set_default_org(name),
+        OrgCommands::Info => {
+            // Info requires API token
+            let config = Config::load()?;
+            let _token = require_api_token(
+                cli.api_token.as_deref(),
+                &config,
+                cli.org.as_deref(),
+            )?;
+
+            let response = PlaceholderResponse {
+                message: "Command not yet implemented",
+                command: "org info".into(),
+            };
+            output_success(&response);
+            Ok(())
+        }
+    }
 }

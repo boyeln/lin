@@ -28,3 +28,6 @@ dirs = "5"
 
 # Terminal colors
 colored = "2"
+
+# TTY detection
+atty = "0.2"
