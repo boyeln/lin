@@ -144,18 +144,18 @@ query Project($id: String!) {
 }
 "#;
 
-/// Query to list issues with optional filters.
+/// Query to list issues with optional filters and sorting.
 ///
 /// Variables:
 /// - `first` (Int, optional): Number of issues to fetch
-/// - `teamId` (ID, optional): Filter by team ID
-/// - `assigneeId` (ID, optional): Filter by assignee ID
-/// - `stateId` (ID, optional): Filter by state ID
+/// - `filter` (IssueFilter, optional): Filter criteria for issues
+/// - `orderBy` (PaginationOrderBy, optional): Field to sort by (createdAt, updatedAt, priority, title)
+/// - `sortDirection` (String, optional): Sort direction passed via filter's sortDirection
 ///
 /// Returns: `IssuesResponse`
 pub const ISSUES_QUERY: &str = r#"
-query Issues($first: Int, $filter: IssueFilter) {
-    issues(first: $first, filter: $filter) {
+query Issues($first: Int, $filter: IssueFilter, $orderBy: PaginationOrderBy) {
+    issues(first: $first, filter: $filter, orderBy: $orderBy) {
         nodes {
             id
             identifier
