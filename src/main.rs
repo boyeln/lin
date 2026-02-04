@@ -5,7 +5,7 @@
 use clap::{Parser, Subcommand};
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
-use lin::commands::{comment, cycle, issue, label, org, project, team, user, workflow};
+use lin::commands::{comment, cycle, document, issue, label, org, project, team, user, workflow};
 use lin::config::Config;
 use lin::output::{init_colors, output_error_with_format, output_success, OutputFormat};
 use serde::Serialize;
@@ -84,6 +84,11 @@ enum Commands {
     Label {
         #[command(subcommand)]
         command: LabelCommands,
+    },
+    /// Manage documents
+    Document {
+        #[command(subcommand)]
+        command: DocumentCommands,
     },
 }
 
@@ -323,6 +328,42 @@ enum LabelCommands {
     },
 }
 
+/// Document-related subcommands.
+#[derive(Subcommand, Debug)]
+enum DocumentCommands {
+    /// List all documents
+    #[command(after_help = "EXAMPLES:\n  \
+    lin document list\n  \
+    lin document list --project <project-id>")]
+    List {
+        /// Filter by project ID (optional)
+        #[arg(long)]
+        project: Option<String>,
+    },
+    /// Get details of a specific document (including content)
+    #[command(after_help = "EXAMPLES:\n  \
+    lin document get <document-id>")]
+    Get {
+        /// Document ID
+        id: String,
+    },
+    /// Create a new document
+    #[command(after_help = "EXAMPLES:\n  \
+    lin document create --title \"My Doc\" --content \"# Hello\"\n  \
+    lin document create --title \"Project Doc\" --content \"Content\" --project <project-id>")]
+    Create {
+        /// Document title
+        #[arg(long)]
+        title: String,
+        /// Document content (markdown)
+        #[arg(long)]
+        content: String,
+        /// Project ID to associate the document with (optional)
+        #[arg(long)]
+        project: Option<String>,
+    },
+}
+
 /// User-related subcommands.
 #[derive(Subcommand, Debug)]
 enum UserCommands {
@@ -407,6 +448,7 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
                 Commands::Project { command } => handle_project_command(command, &token, format),
                 Commands::Cycle { command } => handle_cycle_command(command, &token, format),
                 Commands::Label { command } => handle_label_command(command, &token, format),
+                Commands::Document { command } => handle_document_command(command, &token, format),
                 Commands::Org { .. } => unreachable!(),
             }
         }
@@ -596,6 +638,36 @@ fn handle_label_command(
             label::list_labels(&client, options, format)
         }
         LabelCommands::Get { id } => label::get_label(&client, &id, format),
+    }
+}
+
+fn handle_document_command(
+    command: DocumentCommands,
+    token: &str,
+    format: OutputFormat,
+) -> lin::Result<()> {
+    let client = GraphQLClient::new(token);
+
+    match command {
+        DocumentCommands::List { project } => {
+            let options = document::DocumentListOptions {
+                project_id: project,
+            };
+            document::list_documents(&client, options, format)
+        }
+        DocumentCommands::Get { id } => document::get_document(&client, &id, format),
+        DocumentCommands::Create {
+            title,
+            content,
+            project,
+        } => {
+            let options = document::DocumentCreateOptions {
+                title,
+                content,
+                project_id: project,
+            };
+            document::create_document(&client, options, format)
+        }
     }
 }
 

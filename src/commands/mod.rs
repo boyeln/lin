@@ -5,6 +5,7 @@
 
 pub mod comment;
 pub mod cycle;
+pub mod document;
 pub mod issue;
 pub mod label;
 pub mod org;
