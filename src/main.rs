@@ -6,8 +6,8 @@ use clap::{Parser, Subcommand};
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
 use lin::commands::{
-    attachment, comment, cycle, document, git, issue, label, org, project, search, team, user,
-    workflow,
+    attachment, comment, cycle, document, git, issue, label, org, project, relation, search, team,
+    user, workflow,
 };
 use lin::config::Config;
 use lin::output::{init_colors, output_error_with_format, output_success, OutputFormat};
@@ -268,6 +268,34 @@ enum IssueCommands {
     Links {
         /// Issue identifier (e.g., "ENG-123") or UUID
         identifier: String,
+    },
+    /// List all relations for an issue (parent, children, blocks, blocked by, etc.)
+    #[command(after_help = "EXAMPLES:\n  \
+    lin issue relations ENG-123")]
+    Relations {
+        /// Issue identifier (e.g., "ENG-123") or UUID
+        identifier: String,
+    },
+    /// Add a relation between two issues
+    #[command(after_help = "EXAMPLES:\n  \
+    lin issue add-relation ENG-123 ENG-456 --type blocks\n  \
+    lin issue add-relation ENG-123 ENG-456 --type parent\n  \
+    lin issue add-relation ENG-123 ENG-456 --type related")]
+    AddRelation {
+        /// Source issue identifier (e.g., "ENG-123") or UUID
+        issue: String,
+        /// Target issue identifier (e.g., "ENG-456") or UUID
+        related_issue: String,
+        /// Relation type: parent, sub, blocks, blocked_by, related, duplicate
+        #[arg(long = "type")]
+        relation_type: String,
+    },
+    /// Remove a relation by its ID
+    #[command(after_help = "EXAMPLES:\n  \
+    lin issue remove-relation <relation-id>")]
+    RemoveRelation {
+        /// The relation ID to remove
+        relation_id: String,
     },
 }
 
@@ -647,6 +675,25 @@ fn handle_issue_command(
             git::link_pr(&client, &identifier, &url, format)
         }
         IssueCommands::Links { identifier } => git::list_links(&client, &identifier, format),
+        IssueCommands::Relations { identifier } => {
+            relation::list_relations(&client, &identifier, format)
+        }
+        IssueCommands::AddRelation {
+            issue,
+            related_issue,
+            relation_type,
+        } => {
+            let rel_type = relation::RelationType::parse(&relation_type).ok_or_else(|| {
+                lin::error::LinError::config(format!(
+                    "Invalid relation type '{}'. Valid types: parent, sub, blocks, blocked_by, related, duplicate",
+                    relation_type
+                ))
+            })?;
+            relation::add_relation(&client, &issue, &related_issue, rel_type, format)
+        }
+        IssueCommands::RemoveRelation { relation_id } => {
+            relation::remove_relation(&client, &relation_id, format)
+        }
     }
 }
 

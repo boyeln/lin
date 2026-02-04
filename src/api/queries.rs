@@ -1006,6 +1006,125 @@ query IssueSearch($query: String!, $first: Int, $filter: IssueFilter) {
 }
 "#;
 
+/// Query to get all relations for an issue.
+///
+/// Variables:
+/// - `id` (String!): The issue's unique identifier
+///
+/// Returns: `IssueRelationsResponse`
+pub const ISSUE_RELATIONS_QUERY: &str = r#"
+query IssueRelations($id: String!) {
+    issue(id: $id) {
+        id
+        identifier
+        relations {
+            nodes {
+                id
+                type
+                relatedIssue {
+                    id
+                    identifier
+                    title
+                }
+            }
+        }
+        inverseRelations {
+            nodes {
+                id
+                type
+                issue {
+                    id
+                    identifier
+                    title
+                }
+            }
+        }
+        parent {
+            id
+            identifier
+            title
+        }
+        children {
+            nodes {
+                id
+                identifier
+                title
+            }
+        }
+    }
+}
+"#;
+
+/// Mutation to create an issue relation.
+///
+/// Variables:
+/// - `input` (IssueRelationCreateInput!): Relation creation input containing:
+///   - `issueId` (String!): The source issue ID
+///   - `relatedIssueId` (String!): The target issue ID
+///   - `type` (String!): The relation type (blocks, duplicate, related)
+///
+/// Returns: `IssueRelationCreateResponse`
+pub const ISSUE_RELATION_CREATE_MUTATION: &str = r#"
+mutation IssueRelationCreate($input: IssueRelationCreateInput!) {
+    issueRelationCreate(input: $input) {
+        success
+        issueRelation {
+            id
+            type
+            issue {
+                id
+                identifier
+                title
+            }
+            relatedIssue {
+                id
+                identifier
+                title
+            }
+        }
+    }
+}
+"#;
+
+/// Mutation to delete an issue relation.
+///
+/// Variables:
+/// - `id` (String!): The relation's unique identifier
+///
+/// Returns: `IssueRelationDeleteResponse`
+pub const ISSUE_RELATION_DELETE_MUTATION: &str = r#"
+mutation IssueRelationDelete($id: String!) {
+    issueRelationDelete(id: $id) {
+        success
+    }
+}
+"#;
+
+/// Mutation to update an issue's parent (for parent/child relations).
+///
+/// Variables:
+/// - `id` (String!): The child issue's unique identifier
+/// - `input` (IssueUpdateInput!): Update input containing parentId
+///
+/// Returns: `IssueUpdateResponse`
+pub const ISSUE_SET_PARENT_MUTATION: &str = r#"
+mutation IssueSetParent($id: String!, $input: IssueUpdateInput!) {
+    issueUpdate(id: $id, input: $input) {
+        success
+        issue {
+            id
+            identifier
+            title
+            parent {
+                id
+                identifier
+                title
+            }
+        }
+    }
+}
+"#;
+
 /// Mutation to create a file upload URL.
 ///
 /// This returns a presigned URL where the file should be uploaded,
@@ -1307,5 +1426,45 @@ mod tests {
         assert!(ISSUE_SEARCH_QUERY.contains("state"));
         assert!(ISSUE_SEARCH_QUERY.contains("team"));
         assert!(ISSUE_SEARCH_QUERY.contains("assignee"));
+    }
+
+    #[test]
+    fn test_issue_relations_query_is_valid() {
+        assert!(ISSUE_RELATIONS_QUERY.contains("query IssueRelations"));
+        assert!(ISSUE_RELATIONS_QUERY.contains("$id: String!"));
+        assert!(ISSUE_RELATIONS_QUERY.contains("issue(id: $id)"));
+        assert!(ISSUE_RELATIONS_QUERY.contains("relations"));
+        assert!(ISSUE_RELATIONS_QUERY.contains("inverseRelations"));
+        assert!(ISSUE_RELATIONS_QUERY.contains("parent"));
+        assert!(ISSUE_RELATIONS_QUERY.contains("children"));
+        assert!(ISSUE_RELATIONS_QUERY.contains("relatedIssue"));
+    }
+
+    #[test]
+    fn test_issue_relation_create_mutation_is_valid() {
+        assert!(ISSUE_RELATION_CREATE_MUTATION.contains("mutation IssueRelationCreate"));
+        assert!(ISSUE_RELATION_CREATE_MUTATION.contains("$input: IssueRelationCreateInput!"));
+        assert!(ISSUE_RELATION_CREATE_MUTATION.contains("issueRelationCreate"));
+        assert!(ISSUE_RELATION_CREATE_MUTATION.contains("success"));
+        assert!(ISSUE_RELATION_CREATE_MUTATION.contains("issueRelation"));
+        assert!(ISSUE_RELATION_CREATE_MUTATION.contains("type"));
+    }
+
+    #[test]
+    fn test_issue_relation_delete_mutation_is_valid() {
+        assert!(ISSUE_RELATION_DELETE_MUTATION.contains("mutation IssueRelationDelete"));
+        assert!(ISSUE_RELATION_DELETE_MUTATION.contains("$id: String!"));
+        assert!(ISSUE_RELATION_DELETE_MUTATION.contains("issueRelationDelete"));
+        assert!(ISSUE_RELATION_DELETE_MUTATION.contains("success"));
+    }
+
+    #[test]
+    fn test_issue_set_parent_mutation_is_valid() {
+        assert!(ISSUE_SET_PARENT_MUTATION.contains("mutation IssueSetParent"));
+        assert!(ISSUE_SET_PARENT_MUTATION.contains("$id: String!"));
+        assert!(ISSUE_SET_PARENT_MUTATION.contains("$input: IssueUpdateInput!"));
+        assert!(ISSUE_SET_PARENT_MUTATION.contains("issueUpdate"));
+        assert!(ISSUE_SET_PARENT_MUTATION.contains("success"));
+        assert!(ISSUE_SET_PARENT_MUTATION.contains("parent"));
     }
 }

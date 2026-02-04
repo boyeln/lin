@@ -9,7 +9,8 @@ use serde::Serialize;
 use crate::error::LinError;
 use crate::models::{
     Attachment, AttachmentWithIssue, Comment, Cycle, CycleWithIssues, Document,
-    DocumentWithContent, Issue, IssueWithComments, Label, Project, Team, User, WorkflowState,
+    DocumentWithContent, FullIssueRelation, Issue, IssueWithComments, Label, NormalizedRelation,
+    Project, Team, User, WorkflowState,
 };
 
 /// Initialize color support based on terminal capabilities.
@@ -536,6 +537,54 @@ impl HumanDisplay for IssueWithComments {
     }
 }
 
+impl HumanDisplay for NormalizedRelation {
+    fn human_fmt(&self) -> String {
+        // Color the relation type based on its meaning
+        let type_colored = match self.relation_type.as_str() {
+            "parent" => "Parent".cyan().bold(),
+            "child" => "Child".cyan(),
+            "blocks" => "Blocks".red().bold(),
+            "blocked_by" => "Blocked by".red(),
+            "related" => "Related to".yellow(),
+            "duplicate" => "Duplicate of".magenta(),
+            other => other.normal(),
+        };
+
+        format!(
+            "{} {} {}",
+            type_colored,
+            self.related_issue.identifier.bold().cyan(),
+            self.related_issue.title
+        )
+    }
+}
+
+impl HumanDisplay for FullIssueRelation {
+    fn human_fmt(&self) -> String {
+        // Color the relation type
+        let type_colored = match self.type_.as_str() {
+            "blocks" => "blocks".red().bold(),
+            "related" => "related to".yellow(),
+            "duplicate" => "duplicate of".magenta(),
+            other => other.normal(),
+        };
+
+        let source = self
+            .issue
+            .as_ref()
+            .map(|i| format!("{} {}", i.identifier.bold().cyan(), i.title))
+            .unwrap_or_else(|| "(unknown)".dimmed().to_string());
+
+        let target = self
+            .related_issue
+            .as_ref()
+            .map(|i| format!("{} {}", i.identifier.bold().cyan(), i.title))
+            .unwrap_or_else(|| "(unknown)".dimmed().to_string());
+
+        format!("{} {} {}", source, type_colored, target)
+    }
+}
+
 impl<T: HumanDisplay> HumanDisplay for Vec<T> {
     fn human_fmt(&self) -> String {
         if self.is_empty() {
@@ -947,5 +996,69 @@ mod tests {
         assert!(output.contains("https://example.com/log.txt"));
         assert!(output.contains("ENG-456"));
         assert!(output.contains("2024-01-20"));
+    }
+
+    #[test]
+    fn test_normalized_relation_human_display() {
+        use crate::models::RelatedIssue;
+
+        let relation = NormalizedRelation {
+            id: "rel-123".to_string(),
+            relation_type: "blocks".to_string(),
+            related_issue: RelatedIssue {
+                id: "issue-456".to_string(),
+                identifier: "ENG-456".to_string(),
+                title: "Blocked issue".to_string(),
+            },
+        };
+        let output = relation.human_fmt();
+        assert!(output.contains("Blocks"));
+        assert!(output.contains("ENG-456"));
+        assert!(output.contains("Blocked issue"));
+    }
+
+    #[test]
+    fn test_normalized_relation_parent_display() {
+        use crate::models::RelatedIssue;
+
+        let relation = NormalizedRelation {
+            id: "parent:issue-100".to_string(),
+            relation_type: "parent".to_string(),
+            related_issue: RelatedIssue {
+                id: "issue-100".to_string(),
+                identifier: "ENG-100".to_string(),
+                title: "Parent issue".to_string(),
+            },
+        };
+        let output = relation.human_fmt();
+        assert!(output.contains("Parent"));
+        assert!(output.contains("ENG-100"));
+        assert!(output.contains("Parent issue"));
+    }
+
+    #[test]
+    fn test_full_issue_relation_human_display() {
+        use crate::models::RelatedIssue;
+
+        let relation = FullIssueRelation {
+            id: "rel-new".to_string(),
+            type_: "blocks".to_string(),
+            issue: Some(RelatedIssue {
+                id: "issue-1".to_string(),
+                identifier: "ENG-1".to_string(),
+                title: "Source issue".to_string(),
+            }),
+            related_issue: Some(RelatedIssue {
+                id: "issue-2".to_string(),
+                identifier: "ENG-2".to_string(),
+                title: "Target issue".to_string(),
+            }),
+        };
+        let output = relation.human_fmt();
+        assert!(output.contains("ENG-1"));
+        assert!(output.contains("Source issue"));
+        assert!(output.contains("blocks"));
+        assert!(output.contains("ENG-2"));
+        assert!(output.contains("Target issue"));
     }
 }
