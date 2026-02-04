@@ -12,6 +12,7 @@ pub mod issue;
 pub mod label;
 pub mod org;
 pub mod project;
+pub mod relation;
 pub mod search;
 pub mod team;
 pub mod user;

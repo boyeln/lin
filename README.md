@@ -167,6 +167,20 @@ lin org set-default <name>
 lin search "authentication bug"
 lin search "fix login" --team ENG --limit 10
 lin search "urgent" --assignee me --state "In Progress"
+
+# List issue relations (parent, children, blocks, blocked by, related)
+lin issue relations ENG-123
+
+# Add a relation between issues
+lin issue add-relation ENG-123 ENG-456 --type blocks
+lin issue add-relation ENG-123 ENG-456 --type parent
+lin issue add-relation ENG-123 ENG-456 --type sub
+lin issue add-relation ENG-123 ENG-456 --type blocked_by
+lin issue add-relation ENG-123 ENG-456 --type related
+lin issue add-relation ENG-123 ENG-456 --type duplicate
+
+# Remove a relation
+lin issue remove-relation <relation-id>
 ```
 
 ## Features
@@ -203,7 +217,7 @@ lin search "urgent" --assignee me --state "In Progress"
 | Templates | ❌ | Bulk create issues from templates |
 | Search | ✅ | Full-text search for issues |
 | **Issue Relations** | | |
-| Issue relations | ❌ | Parent/child, blocks/blocked by, relates to |
+| Issue relations | ✅ | Parent/child, blocks/blocked by, relates to, duplicate |
 | **Advanced Filtering** | | |
 | Date range filters | ❌ | Filter by created/updated date ranges |
 | Sort options | ❌ | Sort by priority, updated date, created date |
