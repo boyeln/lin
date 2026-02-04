@@ -298,6 +298,20 @@ mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
 }
 "#;
 
+/// Mutation to delete an issue.
+///
+/// Variables:
+/// - `id` (String!): The issue's unique identifier
+///
+/// Returns: `IssueDeleteResponse`
+pub const ISSUE_DELETE_MUTATION: &str = r#"
+mutation IssueDelete($id: String!) {
+    issueDelete(id: $id) {
+        success
+    }
+}
+"#;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -376,5 +390,13 @@ mod tests {
         assert!(ISSUE_UPDATE_MUTATION.contains("$input: IssueUpdateInput!"));
         assert!(ISSUE_UPDATE_MUTATION.contains("issueUpdate"));
         assert!(ISSUE_UPDATE_MUTATION.contains("success"));
+    }
+
+    #[test]
+    fn test_issue_delete_mutation_is_valid() {
+        assert!(ISSUE_DELETE_MUTATION.contains("mutation IssueDelete"));
+        assert!(ISSUE_DELETE_MUTATION.contains("$id: String!"));
+        assert!(ISSUE_DELETE_MUTATION.contains("issueDelete"));
+        assert!(ISSUE_DELETE_MUTATION.contains("success"));
     }
 }

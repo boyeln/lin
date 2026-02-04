@@ -201,6 +201,22 @@ pub struct IssueUpdateResponse {
     pub issue_update: IssueUpdatePayload,
 }
 
+/// Response for issue deletion mutation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueDeletePayload {
+    /// Whether the mutation was successful.
+    pub success: bool,
+}
+
+/// Response wrapper for issue deletion.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueDeleteResponse {
+    /// The mutation payload.
+    pub issue_delete: IssueDeletePayload,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
