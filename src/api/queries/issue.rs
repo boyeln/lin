@@ -377,6 +377,26 @@ query IssueByIdentifierWithComments($filter: IssueFilter!) {
 }
 "#;
 
+/// Query to get an issue's team information.
+///
+/// Used to resolve which team an issue belongs to for state resolution.
+///
+/// Variables:
+/// - `id` (String!): The issue's unique identifier
+///
+/// Returns: `IssueTeamResponse`
+pub const ISSUE_TEAM_QUERY: &str = r#"
+query IssueTeam($id: String!) {
+    issue(id: $id) {
+        id
+        team {
+            id
+            key
+        }
+    }
+}
+"#;
+
 /// Query to get comments for an issue by ID.
 ///
 /// Variables:

@@ -133,6 +133,24 @@ pub struct IssueResponse {
     pub issue: Issue,
 }
 
+/// Minimal issue data with just ID and team.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueTeamOnly {
+    /// Issue ID.
+    pub id: String,
+    /// Team this issue belongs to.
+    pub team: super::team::TeamBasic,
+}
+
+/// Response wrapper for an issue's team query.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueTeamResponse {
+    /// The issue with team information.
+    pub issue: IssueTeamOnly,
+}
+
 /// Response wrapper for a single issue with comments query.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -455,5 +473,22 @@ mod tests {
         assert_eq!(response.issue.identifier, "ENG-456");
         assert_eq!(response.issue.attachments.nodes.len(), 1);
         assert_eq!(response.issue.attachments.nodes[0].title, "File1.png");
+    }
+
+    #[test]
+    fn test_issue_team_response_deserialization() {
+        let json = r#"{
+            "issue": {
+                "id": "issue-123",
+                "team": {
+                    "id": "team-456",
+                    "key": "ENG"
+                }
+            }
+        }"#;
+        let response: IssueTeamResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(response.issue.id, "issue-123");
+        assert_eq!(response.issue.team.id, "team-456");
+        assert_eq!(response.issue.team.key, "ENG");
     }
 }
