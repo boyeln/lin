@@ -5,16 +5,22 @@ A command-line interface for [Linear](https://linear.app/), the issue tracking t
 ## Installation
 
 ```bash
-cargo install lin
+curl -fsSL https://raw.githubusercontent.com/boyeln/lin/main/install.sh | bash
 ```
 
-Or build from source:
+This downloads the latest binary to `~/.local/bin` (Linux/macOS).
+
+### Updating
 
 ```bash
-git clone https://github.com/your-repo/lin.git
-cd lin
-cargo build --release
+lin update              # Update to latest version
+lin update --check      # Check if update is available
 ```
+
+### Other options
+
+- **Manual download**: Get binaries from the [releases page](https://github.com/boyeln/lin/releases)
+- **From source**: `git clone && cargo build --release`
 
 ## Authentication
 
