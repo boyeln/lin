@@ -51,6 +51,9 @@ pub struct CachedTeam {
     pub name: String,
     /// Map of state names (lowercase) to state UUIDs
     pub states: HashMap<String, String>,
+    /// Map of estimate names (lowercase) to numeric values
+    #[serde(default)]
+    pub estimates: HashMap<String, f64>,
 }
 
 impl Config {
@@ -281,6 +284,50 @@ impl Config {
             .unwrap_or_default()
     }
 
+    /// Get an estimate value from the cache by team key and estimate name.
+    ///
+    /// Estimate name lookup is case-insensitive.
+    /// Returns None if the team or estimate is not in the cache.
+    pub fn get_estimate_value(&self, team_key: &str, estimate_name: &str) -> Option<f64> {
+        let org = self.get_active_org().ok()?;
+        let team = org.cache.teams.get(team_key)?;
+        team.estimates.get(&estimate_name.to_lowercase()).copied()
+    }
+
+    /// Get all estimate names for a team from the active organization's cache.
+    pub fn get_all_estimates_for_team(&self, team_key: &str) -> Vec<String> {
+        self.get_active_org()
+            .ok()
+            .and_then(|org| org.cache.teams.get(team_key))
+            .map(|team| team.estimates.keys().cloned().collect())
+            .unwrap_or_default()
+    }
+
+    /// Set estimates for a team in the active organization's cache.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if no active organization is set or the team is not cached.
+    pub fn set_team_estimates(
+        &mut self,
+        team_key: &str,
+        estimates: HashMap<String, f64>,
+    ) -> Result<()> {
+        let org = self.get_active_org_mut()?;
+        let team =
+            org.cache.teams.get_mut(team_key).ok_or_else(|| {
+                LinError::config(format!("Team '{}' not found in cache", team_key))
+            })?;
+
+        // Store estimates with lowercase keys for case-insensitive lookup
+        team.estimates = estimates
+            .into_iter()
+            .map(|(k, v)| (k.to_lowercase(), v))
+            .collect();
+
+        Ok(())
+    }
+
     /// Update the last sync time for the active organization.
     ///
     /// # Errors
@@ -467,6 +514,7 @@ mod tests {
             id: "team-123".to_string(),
             name: "Engineering".to_string(),
             states: HashMap::new(),
+            estimates: HashMap::new(),
         };
 
         config.cache_team("ENG".to_string(), team).unwrap();
@@ -501,6 +549,7 @@ mod tests {
             id: "team-123".to_string(),
             name: "Engineering".to_string(),
             states,
+            estimates: HashMap::new(),
         };
 
         config.cache_team("ENG".to_string(), team).unwrap();
@@ -542,11 +591,13 @@ mod tests {
             id: "team-1".to_string(),
             name: "Engineering".to_string(),
             states: HashMap::new(),
+            estimates: HashMap::new(),
         };
         let team2 = CachedTeam {
             id: "team-2".to_string(),
             name: "Design".to_string(),
             states: HashMap::new(),
+            estimates: HashMap::new(),
         };
 
         config.cache_team("ENG".to_string(), team1).unwrap();
@@ -573,6 +624,7 @@ mod tests {
             id: "team-123".to_string(),
             name: "Engineering".to_string(),
             states,
+            estimates: HashMap::new(),
         };
 
         config.cache_team("ENG".to_string(), team).unwrap();
@@ -608,5 +660,117 @@ mod tests {
         let path = Config::config_path();
         assert!(path.to_string_lossy().contains("lin"));
         assert!(path.to_string_lossy().contains("config.json"));
+    }
+
+    #[test]
+    fn test_get_estimate_value() {
+        let mut config = Config::default();
+        config
+            .add_org("org".to_string(), "token".to_string())
+            .unwrap();
+
+        let mut estimates = HashMap::new();
+        estimates.insert("xs".to_string(), 1.0);
+        estimates.insert("s".to_string(), 2.0);
+        estimates.insert("m".to_string(), 3.0);
+        estimates.insert("l".to_string(), 5.0);
+        estimates.insert("xl".to_string(), 8.0);
+
+        let team = CachedTeam {
+            id: "team-123".to_string(),
+            name: "Engineering".to_string(),
+            states: HashMap::new(),
+            estimates,
+        };
+
+        config.cache_team("ENG".to_string(), team).unwrap();
+
+        // Case-insensitive lookup
+        assert_eq!(config.get_estimate_value("ENG", "xs"), Some(1.0));
+        assert_eq!(config.get_estimate_value("ENG", "XS"), Some(1.0));
+        assert_eq!(config.get_estimate_value("ENG", "m"), Some(3.0));
+        assert_eq!(config.get_estimate_value("ENG", "M"), Some(3.0));
+        assert_eq!(config.get_estimate_value("ENG", "xl"), Some(8.0));
+    }
+
+    #[test]
+    fn test_get_estimate_value_not_cached() {
+        let mut config = Config::default();
+        config
+            .add_org("org".to_string(), "token".to_string())
+            .unwrap();
+
+        let estimate = config.get_estimate_value("ENG", "xs");
+        assert!(estimate.is_none());
+    }
+
+    #[test]
+    fn test_get_all_estimates_for_team() {
+        let mut config = Config::default();
+        config
+            .add_org("org".to_string(), "token".to_string())
+            .unwrap();
+
+        let mut estimates = HashMap::new();
+        estimates.insert("xs".to_string(), 1.0);
+        estimates.insert("s".to_string(), 2.0);
+        estimates.insert("m".to_string(), 3.0);
+
+        let team = CachedTeam {
+            id: "team-123".to_string(),
+            name: "Engineering".to_string(),
+            states: HashMap::new(),
+            estimates,
+        };
+
+        config.cache_team("ENG".to_string(), team).unwrap();
+
+        let estimate_names = config.get_all_estimates_for_team("ENG");
+        assert_eq!(estimate_names.len(), 3);
+        assert!(estimate_names.contains(&"xs".to_string()));
+        assert!(estimate_names.contains(&"s".to_string()));
+        assert!(estimate_names.contains(&"m".to_string()));
+    }
+
+    #[test]
+    fn test_set_team_estimates() {
+        let mut config = Config::default();
+        config
+            .add_org("org".to_string(), "token".to_string())
+            .unwrap();
+
+        let team = CachedTeam {
+            id: "team-123".to_string(),
+            name: "Engineering".to_string(),
+            states: HashMap::new(),
+            estimates: HashMap::new(),
+        };
+
+        config.cache_team("ENG".to_string(), team).unwrap();
+
+        let mut new_estimates = HashMap::new();
+        new_estimates.insert("XS".to_string(), 1.0);
+        new_estimates.insert("S".to_string(), 2.0);
+        new_estimates.insert("M".to_string(), 3.0);
+
+        config.set_team_estimates("ENG", new_estimates).unwrap();
+
+        // Verify estimates were stored with lowercase keys
+        assert_eq!(config.get_estimate_value("ENG", "xs"), Some(1.0));
+        assert_eq!(config.get_estimate_value("ENG", "s"), Some(2.0));
+        assert_eq!(config.get_estimate_value("ENG", "m"), Some(3.0));
+    }
+
+    #[test]
+    fn test_set_team_estimates_team_not_found() {
+        let mut config = Config::default();
+        config
+            .add_org("org".to_string(), "token".to_string())
+            .unwrap();
+
+        let estimates = HashMap::new();
+        let result = config.set_team_estimates("NOTEXIST", estimates);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
     }
 }

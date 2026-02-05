@@ -167,6 +167,7 @@ fn sync_org_data(client: &GraphQLClient, config: &mut Config) -> Result<Vec<(Str
             id: team.id,
             name: team.name,
             states,
+            estimates: HashMap::new(),
         };
 
         config.cache_team(team.key.clone(), cached_team)?;
