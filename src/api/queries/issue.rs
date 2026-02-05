@@ -137,6 +137,7 @@ query IssueByIdentifier($filter: IssueFilter!) {
 ///   - `priority` (Int, optional): Priority (0-4)
 ///   - `assigneeId` (String, optional): Assignee user ID
 ///   - `stateId` (String, optional): Initial state ID
+///   - `projectId` (String, optional): Project ID
 ///
 /// Returns: `IssueCreateResponse`
 pub const ISSUE_CREATE_MUTATION: &str = r#"
@@ -185,6 +186,7 @@ mutation IssueCreate($input: IssueCreateInput!) {
 ///   - `priority` (Int, optional): New priority (0-4)
 ///   - `assigneeId` (String, optional): New assignee user ID
 ///   - `stateId` (String, optional): New state ID
+///   - `projectId` (String, optional): New project ID
 ///
 /// Returns: `IssueUpdateResponse`
 pub const ISSUE_UPDATE_MUTATION: &str = r#"

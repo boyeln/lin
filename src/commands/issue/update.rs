@@ -34,6 +34,7 @@ use super::{IssueUpdateOptions, is_uuid, parse_identifier};
 /// let options = IssueUpdateOptions {
 ///     title: Some("New title".to_string()),
 ///     priority: Some(1), // Urgent
+///     project_id: None,
 ///     ..Default::default()
 /// };
 /// update_issue(&client, "ENG-123", options, OutputFormat::Human)?;
@@ -98,6 +99,10 @@ pub fn update_issue(
 
     if let Some(label_ids) = options.label_ids {
         input.insert("labelIds".to_string(), serde_json::json!(label_ids));
+    }
+
+    if let Some(project_id) = options.project_id {
+        input.insert("projectId".to_string(), serde_json::json!(project_id));
     }
 
     let variables = serde_json::json!({
@@ -178,6 +183,7 @@ mod tests {
             state_id: Some("state-2".to_string()),
             priority: Some(1),
             label_ids: None,
+            project_id: None,
         };
 
         let result = update_issue(
@@ -392,6 +398,7 @@ mod tests {
             state_id: None,
             priority: Some(3),
             label_ids: None,
+            project_id: None,
         };
 
         let result = update_issue(

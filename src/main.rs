@@ -227,7 +227,8 @@ enum IssueCommands {
     /// Create a new issue
     #[command(after_help = "EXAMPLES:\n  \
     lin issue create --team <team-id> --title \"Fix bug\" --priority 2\n  \
-    lin issue create --team <team-id> --title \"New feature\" --labels <label-id1> --labels <label-id2>")]
+    lin issue create --team <team-id> --title \"New feature\" --labels <label-id1> --labels <label-id2>\n  \
+    lin issue create --team <team-id> --title \"Project task\" --project <project-id>")]
     Create {
         /// Issue title
         #[arg(long)]
@@ -250,12 +251,16 @@ enum IssueCommands {
         /// Label IDs to add to the issue (can be specified multiple times)
         #[arg(long)]
         labels: Option<Vec<String>>,
+        /// Project ID to assign the issue to (optional)
+        #[arg(long)]
+        project: Option<String>,
     },
     /// Update an existing issue
     #[command(after_help = "EXAMPLES:\n  \
     lin issue update ENG-123 --title \"New title\"\n  \
     lin issue update ENG-123 --state <state-id> --priority 1\n  \
-    lin issue update ENG-123 --labels <label-id1> --labels <label-id2>")]
+    lin issue update ENG-123 --labels <label-id1> --labels <label-id2>\n  \
+    lin issue update ENG-123 --project <project-id>")]
     Update {
         /// Issue identifier (e.g., "ENG-123") or UUID
         identifier: String,
@@ -277,6 +282,9 @@ enum IssueCommands {
         /// Label IDs to set on the issue (replaces existing labels, can be specified multiple times)
         #[arg(long)]
         labels: Option<Vec<String>>,
+        /// Project ID to assign the issue to (optional)
+        #[arg(long)]
+        project: Option<String>,
     },
     /// Delete an issue
     #[command(after_help = "EXAMPLES:\n  \
@@ -811,6 +819,7 @@ fn handle_issue_command(
             state,
             priority,
             labels,
+            project,
         } => {
             let options = issue::IssueCreateOptions {
                 title,
@@ -820,6 +829,7 @@ fn handle_issue_command(
                 state_id: state,
                 priority: priority.map(|p| p as i32),
                 label_ids: labels,
+                project_id: project,
             };
             issue::create::create_issue(&client, options, format)
         }
@@ -831,6 +841,7 @@ fn handle_issue_command(
             state,
             priority,
             labels,
+            project,
         } => {
             let options = issue::IssueUpdateOptions {
                 title,
@@ -839,6 +850,7 @@ fn handle_issue_command(
                 state_id: state,
                 priority: priority.map(|p| p as i32),
                 label_ids: labels,
+                project_id: project,
             };
             issue::update::update_issue(&client, &identifier, options, format)
         }
