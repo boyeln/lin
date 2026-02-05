@@ -175,13 +175,16 @@ fn is_git_link(url: &str) -> bool {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::git::link_branch;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// link_branch(&client, "ENG-123", "feature/my-branch", None, OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn link_branch(
     client: &GraphQLClient,
@@ -238,13 +241,16 @@ pub fn link_branch(
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::git::link_pr;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// link_pr(&client, "ENG-123", "https://github.com/org/repo/pull/42", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn link_pr(
     client: &GraphQLClient,
@@ -329,13 +335,16 @@ fn extract_pr_number(url: &str) -> Option<&str> {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::git::list_links;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// list_links(&client, "ENG-123", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn list_links(
     client: &GraphQLClient,

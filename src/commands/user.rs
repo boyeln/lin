@@ -19,13 +19,16 @@ use crate::Result;
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::user::me;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// me(&client, OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn me(client: &GraphQLClient, format: OutputFormat) -> Result<()> {
     let response: ViewerResponse = client.query(queries::VIEWER_QUERY, serde_json::json!({}))?;
@@ -44,13 +47,16 @@ pub fn me(client: &GraphQLClient, format: OutputFormat) -> Result<()> {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::user::list_users;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// list_users(&client, OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn list_users(client: &GraphQLClient, format: OutputFormat) -> Result<()> {
     let response: UsersResponse = client.query(queries::USERS_QUERY, serde_json::json!({}))?;

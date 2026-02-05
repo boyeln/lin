@@ -21,7 +21,8 @@ pub const LINEAR_API_URL: &str = "https://api.linear.app/graphql";
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use serde::Deserialize;
 ///
@@ -41,6 +42,8 @@ pub const LINEAR_API_URL: &str = "https://api.linear.app/graphql";
 ///     "query { viewer { id name } }",
 ///     serde_json::json!({}),
 /// )?;
+/// # Ok(())
+/// # }
 /// ```
 pub struct GraphQLClient {
     /// The API token for authentication.
@@ -133,12 +136,19 @@ impl GraphQLClient {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # use lin::api::GraphQLClient;
+    /// # let client = GraphQLClient::new("token");
+    /// # const ISSUES_QUERY: &str = "";
+    /// # type IssuesResponse = serde_json::Value;
     /// let variables = serde_json::json!({
     ///     "first": 10,
     ///     "teamId": "team-123"
     /// });
     /// let response: IssuesResponse = client.query(ISSUES_QUERY, variables)?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn query<T: DeserializeOwned>(
         &self,

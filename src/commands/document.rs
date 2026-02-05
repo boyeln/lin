@@ -37,7 +37,8 @@ pub struct DocumentCreateOptions {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::document::{list_documents, DocumentListOptions};
 /// use lin::output::OutputFormat;
@@ -45,6 +46,8 @@ pub struct DocumentCreateOptions {
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// let options = DocumentListOptions::default();
 /// list_documents(&client, options, OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn list_documents(
     client: &GraphQLClient,
@@ -84,13 +87,16 @@ pub fn list_documents(
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::document::get_document;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// get_document(&client, "doc-123", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn get_document(client: &GraphQLClient, id: &str, format: OutputFormat) -> Result<()> {
     let variables = serde_json::json!({
@@ -113,7 +119,8 @@ pub fn get_document(client: &GraphQLClient, id: &str, format: OutputFormat) -> R
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::document::{create_document, DocumentCreateOptions};
 /// use lin::output::OutputFormat;
@@ -125,6 +132,8 @@ pub fn get_document(client: &GraphQLClient, id: &str, format: OutputFormat) -> R
 ///     project_id: None,
 /// };
 /// create_document(&client, options, OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn create_document(
     client: &GraphQLClient,

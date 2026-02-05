@@ -19,13 +19,16 @@ use crate::Result;
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::workflow::list_workflow_states;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// list_workflow_states(&client, "team-123", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn list_workflow_states(
     client: &GraphQLClient,
