@@ -5,7 +5,6 @@
 
 pub mod attachment;
 pub mod auth;
-pub mod cache;
 pub mod comment;
 pub mod completions;
 pub mod cycle;
