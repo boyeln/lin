@@ -148,7 +148,7 @@ fn sync_org_data(client: &GraphQLClient, config: &mut Config) -> Result<Vec<(Str
         // Query workflow states for this team
         let states_response: WorkflowStatesResponse = client.query(
             queries::workflow::WORKFLOW_STATES_QUERY,
-            serde_json::json!({ "teamId": team.id }),
+            serde_json::json!({ "id": team.id }),
         )?;
 
         // Build state name -> state ID map (lowercase for case-insensitive lookup)
