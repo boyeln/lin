@@ -33,12 +33,15 @@ pub const LINEAR_API_TOKEN_ENV: &str = "LINEAR_API_TOKEN";
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::auth::get_api_token;
 /// use lin::config::Config;
 ///
 /// let config = Config::load()?;
 /// let token = get_api_token(None, &config, None)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn get_api_token(
     cli_token: Option<&str>,

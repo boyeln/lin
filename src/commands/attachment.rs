@@ -90,13 +90,16 @@ fn resolve_issue_id(client: &GraphQLClient, identifier: &str) -> Result<String> 
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::attachment::list_attachments;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// list_attachments(&client, "ENG-123", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn list_attachments(
     client: &GraphQLClient,
@@ -127,13 +130,16 @@ pub fn list_attachments(
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::attachment::get_attachment;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// get_attachment(&client, "attachment-123", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn get_attachment(client: &GraphQLClient, id: &str, format: OutputFormat) -> Result<()> {
     let variables = serde_json::json!({
@@ -161,13 +167,16 @@ pub fn get_attachment(client: &GraphQLClient, id: &str, format: OutputFormat) ->
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::attachment::upload_attachment;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// upload_attachment(&client, "ENG-123", "/path/to/file.png", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn upload_attachment(
     client: &GraphQLClient,

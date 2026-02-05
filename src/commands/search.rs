@@ -35,7 +35,8 @@ pub struct SearchOptions {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::search::{search_issues, SearchOptions};
 /// use lin::output::OutputFormat;
@@ -47,6 +48,8 @@ pub struct SearchOptions {
 ///     ..Default::default()
 /// };
 /// search_issues(&client, "authentication bug", None, options, OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn search_issues(
     client: &GraphQLClient,

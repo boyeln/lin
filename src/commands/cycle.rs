@@ -19,13 +19,16 @@ use crate::Result;
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::cycle::list_cycles;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// list_cycles(&client, "team-123", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn list_cycles(client: &GraphQLClient, team_id: &str, format: OutputFormat) -> Result<()> {
     let variables = serde_json::json!({
@@ -48,13 +51,16 @@ pub fn list_cycles(client: &GraphQLClient, team_id: &str, format: OutputFormat) 
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::cycle::get_cycle;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// get_cycle(&client, "cycle-123", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn get_cycle(client: &GraphQLClient, id: &str, format: OutputFormat) -> Result<()> {
     let variables = serde_json::json!({

@@ -26,7 +26,8 @@ pub struct LabelListOptions {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::label::{list_labels, LabelListOptions};
 /// use lin::output::OutputFormat;
@@ -34,6 +35,8 @@ pub struct LabelListOptions {
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// let options = LabelListOptions { team_id: None };
 /// list_labels(&client, options, OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn list_labels(
     client: &GraphQLClient,
@@ -68,13 +71,16 @@ pub fn list_labels(
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::label::get_label;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// get_label(&client, "label-123", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn get_label(client: &GraphQLClient, id: &str, format: OutputFormat) -> Result<()> {
     let variables = serde_json::json!({

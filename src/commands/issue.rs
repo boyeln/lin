@@ -322,7 +322,8 @@ pub fn parse_identifier(s: &str) -> Result<(String, i32)> {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::issue::{list_issues, IssueListOptions};
 /// use lin::output::OutputFormat;
@@ -333,8 +334,11 @@ pub fn parse_identifier(s: &str) -> Result<(String, i32)> {
 ///     assignee: None,
 ///     state: None,
 ///     limit: Some(10),
+///     ..Default::default()
 /// };
 /// list_issues(&client, None, options, OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn list_issues(
     client: &GraphQLClient,
@@ -493,7 +497,8 @@ pub fn list_issues(
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::issue::get_issue;
 /// use lin::output::OutputFormat;
@@ -505,6 +510,8 @@ pub fn list_issues(
 ///
 /// // By identifier
 /// get_issue(&client, "ENG-123", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn get_issue(
     client: &GraphQLClient,
@@ -640,7 +647,8 @@ fn get_issue_with_comments_impl(
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::issue::{create_issue, IssueCreateOptions};
 /// use lin::output::OutputFormat;
@@ -653,8 +661,11 @@ fn get_issue_with_comments_impl(
 ///     assignee_id: None,
 ///     state_id: None,
 ///     priority: Some(2), // High priority
+///     label_ids: None,
 /// };
 /// create_issue(&client, options, OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn create_issue(
     client: &GraphQLClient,
@@ -721,7 +732,8 @@ pub fn create_issue(
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::issue::{update_issue, IssueUpdateOptions};
 /// use lin::output::OutputFormat;
@@ -733,6 +745,8 @@ pub fn create_issue(
 ///     ..Default::default()
 /// };
 /// update_issue(&client, "ENG-123", options, OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn update_issue(
     client: &GraphQLClient,
@@ -871,13 +885,16 @@ fn resolve_issue_id(client: &GraphQLClient, id_or_identifier: &str) -> Result<St
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::issue::delete_issue;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// delete_issue(&client, "ENG-123", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn delete_issue(
     client: &GraphQLClient,
@@ -912,13 +929,16 @@ pub fn delete_issue(
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::issue::archive_issue;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// archive_issue(&client, "ENG-123", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn archive_issue(
     client: &GraphQLClient,
@@ -954,13 +974,16 @@ pub fn archive_issue(
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::issue::unarchive_issue;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// unarchive_issue(&client, "ENG-123", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn unarchive_issue(
     client: &GraphQLClient,

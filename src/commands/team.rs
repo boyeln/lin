@@ -18,13 +18,16 @@ use crate::Result;
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::team::list_teams;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// list_teams(&client, OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn list_teams(client: &GraphQLClient, format: OutputFormat) -> Result<()> {
     let response: TeamsResponse = client.query(queries::TEAMS_QUERY, serde_json::json!({}))?;
@@ -44,13 +47,16 @@ pub fn list_teams(client: &GraphQLClient, format: OutputFormat) -> Result<()> {
 ///
 /// # Example
 ///
-/// ```ignore
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
 /// use lin::commands::team::get_team;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
 /// get_team(&client, "team-123", OutputFormat::Human)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn get_team(client: &GraphQLClient, id: &str, format: OutputFormat) -> Result<()> {
     let variables = serde_json::json!({
