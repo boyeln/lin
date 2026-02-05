@@ -310,7 +310,7 @@ fn query_workflow_states(
 ) -> Result<Vec<crate::models::WorkflowState>> {
     let states_response: WorkflowStatesResponse = client.query(
         queries::workflow::WORKFLOW_STATES_QUERY,
-        serde_json::json!({ "teamId": team_id }),
+        serde_json::json!({ "id": team_id }),
     )?;
 
     Ok(states_response.team.states.nodes)
