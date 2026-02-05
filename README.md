@@ -133,7 +133,6 @@ Run `lin --help` for full documentation. Each subcommand also supports `--help` 
 | `lin document` | List, get, and create documents |
 | `lin attachment` | List, get, and upload attachments |
 | `lin search` | Full-text search for issues |
-| `lin cache` | View cache status or clear cache |
 | `lin completions` | Generate shell completions |
 
 ### Quick Examples
