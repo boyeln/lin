@@ -24,7 +24,8 @@ use super::IssueCreateOptions;
 /// ```no_run
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
-/// use lin::commands::issue::{create_issue, IssueCreateOptions};
+/// use lin::commands::issue::create::create_issue;
+/// use lin::commands::issue::IssueCreateOptions;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");

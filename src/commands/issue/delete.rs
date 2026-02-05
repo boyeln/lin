@@ -26,7 +26,7 @@ use super::{resolve_issue_id, MessageResponse};
 /// ```no_run
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
-/// use lin::commands::issue::delete_issue;
+/// use lin::commands::issue::delete::delete_issue;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
@@ -70,7 +70,7 @@ pub fn delete_issue(
 /// ```no_run
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
-/// use lin::commands::issue::archive_issue;
+/// use lin::commands::issue::delete::archive_issue;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
@@ -114,7 +114,7 @@ pub fn archive_issue(
 /// ```no_run
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
-/// use lin::commands::issue::unarchive_issue;
+/// use lin::commands::issue::delete::unarchive_issue;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");

@@ -753,12 +753,12 @@ fn handle_issue_command(
                 sort_by,
                 sort_order,
             };
-            issue::list_issues(&client, viewer_id.as_deref(), options, format)
+            issue::read::list_issues(&client, viewer_id.as_deref(), options, format)
         }
         IssueCommands::Get {
             identifier,
             with_comments,
-        } => issue::get_issue_with_comments(&client, &identifier, with_comments, format),
+        } => issue::read::get_issue_with_comments(&client, &identifier, with_comments, format),
         IssueCommands::Create {
             title,
             team,
@@ -777,7 +777,7 @@ fn handle_issue_command(
                 priority: priority.map(|p| p as i32),
                 label_ids: labels,
             };
-            issue::create_issue(&client, options, format)
+            issue::create::create_issue(&client, options, format)
         }
         IssueCommands::Update {
             identifier,
@@ -796,12 +796,16 @@ fn handle_issue_command(
                 priority: priority.map(|p| p as i32),
                 label_ids: labels,
             };
-            issue::update_issue(&client, &identifier, options, format)
+            issue::update::update_issue(&client, &identifier, options, format)
         }
-        IssueCommands::Delete { identifier } => issue::delete_issue(&client, &identifier, format),
-        IssueCommands::Archive { identifier } => issue::archive_issue(&client, &identifier, format),
+        IssueCommands::Delete { identifier } => {
+            issue::delete::delete_issue(&client, &identifier, format)
+        }
+        IssueCommands::Archive { identifier } => {
+            issue::delete::archive_issue(&client, &identifier, format)
+        }
         IssueCommands::Unarchive { identifier } => {
-            issue::unarchive_issue(&client, &identifier, format)
+            issue::delete::unarchive_issue(&client, &identifier, format)
         }
         IssueCommands::LinkBranch {
             identifier,

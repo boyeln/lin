@@ -30,7 +30,8 @@ use super::{is_uuid, parse_identifier, IssueListOptions};
 /// ```no_run
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
-/// use lin::commands::issue::{list_issues, IssueListOptions};
+/// use lin::commands::issue::read::list_issues;
+/// use lin::commands::issue::IssueListOptions;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
@@ -205,7 +206,7 @@ pub fn list_issues(
 /// ```no_run
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
-/// use lin::commands::issue::get_issue;
+/// use lin::commands::issue::read::get_issue;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
