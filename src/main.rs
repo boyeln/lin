@@ -7,7 +7,7 @@ use clap_complete::Shell;
 use lin::api::GraphQLClient;
 use lin::auth;
 use lin::commands::{
-    attachment, cache, comment, completions, cycle, document, git, issue, label, project, relation,
+    attachment, comment, completions, cycle, document, git, issue, label, project, relation,
     resolvers, search, self_update, team, user, workflow,
 };
 use lin::config::Config;
@@ -33,10 +33,6 @@ struct Cli {
     /// Output in JSON format (default: human-friendly output)
     #[arg(long, global = true)]
     json: bool,
-
-    /// Bypass the cache and fetch fresh data from the API
-    #[arg(long, global = true)]
-    no_cache: bool,
 
     #[command(subcommand)]
     command: Commands,
@@ -130,14 +126,6 @@ enum Commands {
         /// The shell to generate completions for
         #[arg(value_enum)]
         shell: Shell,
-    },
-    /// Manage the response cache
-    #[command(after_help = "EXAMPLES:\n  \
-    lin cache status\n  \
-    lin cache clear")]
-    Cache {
-        #[command(subcommand)]
-        command: CacheCommands,
     },
     /// Update lin to the latest version
     #[command(after_help = "EXAMPLES:\n  \
@@ -599,19 +587,6 @@ enum AuthCommands {
     Sync,
 }
 
-/// Cache-related subcommands.
-#[derive(Subcommand, Debug)]
-enum CacheCommands {
-    /// Show cache statistics (size, entries, etc.)
-    #[command(after_help = "EXAMPLES:\n  \
-    lin cache status")]
-    Status,
-    /// Clear all cached entries
-    #[command(after_help = "EXAMPLES:\n  \
-    lin cache clear")]
-    Clear,
-}
-
 fn main() {
     let cli = Cli::parse();
     let format = OutputFormat::from_json_flag(cli.json);
@@ -634,8 +609,6 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
             completions::generate_completions(*shell, &mut cmd);
             Ok(())
         }
-        // Cache command doesn't require an API token
-        Commands::Cache { command } => handle_cache_command(command, format),
         // Update command doesn't require an API token
         Commands::Update { check } => {
             if *check {
@@ -650,7 +623,7 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
 
             match cli.command {
                 Commands::Issue { command } => {
-                    handle_issue_command(*command, client, use_cache, cli.no_cache, format)
+                    handle_issue_command(*command, client, use_cache, format)
                 }
                 Commands::Comment { command } => handle_comment_command(command, client, format),
                 Commands::Attachment { command } => {
@@ -672,10 +645,7 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
                     state,
                     limit,
                 } => handle_search_command(client, &query, team, assignee, state, limit, format),
-                Commands::Auth { .. }
-                | Commands::Completions { .. }
-                | Commands::Cache { .. }
-                | Commands::Update { .. } => {
+                Commands::Auth { .. } | Commands::Completions { .. } | Commands::Update { .. } => {
                     unreachable!()
                 }
             }
@@ -727,12 +697,8 @@ fn handle_issue_command(
     command: IssueCommands,
     client: GraphQLClient,
     use_cache: bool,
-    no_cache_flag: bool,
     format: OutputFormat,
 ) -> lin::Result<()> {
-    // Determine effective cache usage (no_cache_flag can override use_cache)
-    let effective_cache = use_cache && !no_cache_flag;
-
     match command {
         IssueCommands::List {
             team,
@@ -833,7 +799,7 @@ fn handle_issue_command(
             project,
         } => {
             // Resolve team key to team ID
-            let team_id = resolvers::resolve_team_id(&client, &team, effective_cache)?;
+            let team_id = resolvers::resolve_team_id(&client, &team, use_cache)?;
 
             // Resolve state name to state ID if provided
             let state_id = if let Some(state_name) = state {
@@ -841,7 +807,7 @@ fn handle_issue_command(
                     &client,
                     &team,
                     &state_name,
-                    effective_cache,
+                    use_cache,
                 )?)
             } else {
                 None
@@ -903,7 +869,7 @@ fn handle_issue_command(
                         &client,
                         &team_key,
                         &state_name,
-                        effective_cache,
+                        use_cache,
                     )?)
                 }
             } else {
@@ -1120,11 +1086,4 @@ fn handle_search_command(
     };
 
     search::search_issues(&client, query, viewer_id.as_deref(), options, format)
-}
-
-fn handle_cache_command(command: &CacheCommands, format: OutputFormat) -> lin::Result<()> {
-    match command {
-        CacheCommands::Status => cache::cache_status(format),
-        CacheCommands::Clear => cache::clear_cache(format),
-    }
 }
