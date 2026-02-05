@@ -39,199 +39,33 @@ lin org set-default my-org
 
 ## Usage
 
+Run `lin --help` for full documentation. Each subcommand also supports `--help` for detailed options.
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `lin issue` | List, create, update, delete, archive issues |
+| `lin team` | List and get team details |
+| `lin user` | Show current user or list all users |
+| `lin project` | List and get project details |
+| `lin cycle` | List and get cycle/sprint details |
+| `lin label` | List and get labels |
+| `lin workflow` | List workflow states for a team |
+| `lin document` | List, get, and create documents |
+| `lin attachment` | List, get, and upload attachments |
+| `lin search` | Full-text search for issues |
+| `lin org` | Manage organizations and config |
+| `lin cache` | View cache status or clear cache |
+| `lin completions` | Generate shell completions |
+
+### Quick Examples
+
 ```bash
-# List all issues
-lin issue list
-
-# List issues with filters
-lin issue list --team ENG --assignee me --state "In Progress"
-
-# Get a specific issue by identifier
+lin issue list --team ENG --assignee me
 lin issue get ENG-123
-
-# Get a specific issue by UUID
-lin issue get 550e8400-e29b-41d4-a716-446655440000
-
-# Create a new issue
-lin issue create --team <team-id> --title "Fix bug" --description "Details here" --priority 2
-
-# Update an issue
-lin issue update ENG-123 --title "Updated title" --state <state-id>
-
-# Delete an issue
-lin issue delete ENG-123
-
-# Archive an issue
-lin issue archive ENG-123
-
-# Unarchive an issue
-lin issue unarchive ENG-123
-
-# List all teams
-lin team list
-
-# Get a specific team
-lin team get <team-id>
-
-# Show current user
-lin user me
-
-# List all users
-lin user list
-
-# List workflow states for a team
-lin workflow list --team <team-id>
-lin workflow list --team ENG
-
-# List all projects
-lin project list
-
-# List projects for a specific team
-lin project list --team <team-id>
-
-# Get a specific project
-lin project get <project-id>
-
-# List issues filtered by project
-lin issue list --project <project-id>
-
-# List issues filtered by cycle
-lin issue list --cycle <cycle-id>
-
-# List cycles for a team
-lin cycle list --team <team-id>
-lin cycle list --team ENG
-
-# Get details of a specific cycle (includes issues)
-lin cycle get <cycle-id>
-
-# List all labels in the workspace
-lin label list
-
-# List labels for a specific team
-lin label list --team <team-id>
-
-# Get details of a specific label
-lin label get <label-id>
-
-# List issues filtered by label
-lin issue list --label <label-id>
-
-# List issues with date range filters
-lin issue list --created-after 2024-01-01
-lin issue list --created-before 2024-12-31
-lin issue list --updated-after 2024-06-01
-lin issue list --updated-before 2024-06-30
-
-# Combine date filters with other filters
-lin issue list --team ENG --created-after 2024-01-01 --created-before 2024-06-30
-lin issue list --assignee me --updated-after 2024-01-01
-
-# Sort issues by field (priority, created, updated, title)
-lin issue list --sort priority
-lin issue list --sort created
-lin issue list --sort updated
-lin issue list --sort title
-
-# Sort with explicit direction (asc or desc)
-lin issue list --sort priority --order asc    # Urgent issues first
-lin issue list --sort priority --order desc   # Low priority issues first
-lin issue list --sort created --order desc    # Newest issues first (default)
-lin issue list --sort updated --order asc     # Oldest updated first
-
-# Combine sorting with filters
-lin issue list --team ENG --sort priority --order asc
-lin issue list --assignee me --sort updated --order desc
-
-# Filter by priority level (0-4 or: none, urgent, high, normal, low)
-lin issue list --priority urgent
-lin issue list --priority 2
-lin issue list --priority high
-
-# Create an issue with labels
-lin issue create --team <team-id> --title "New feature" --labels <label-id1> --labels <label-id2>
-
-# Update an issue's labels
-lin issue update ENG-123 --labels <label-id1> --labels <label-id2>
-
-# List all documents
-lin document list
-
-# List documents for a specific project
-lin document list --project <project-id>
-
-# Get details of a specific document (includes content)
-lin document get <document-id>
-
-# Create a new document
-lin document create --title "My Document" --content "# Hello\n\nWorld"
-
-# Create a document associated with a project
-lin document create --title "Project Doc" --content "Content" --project <project-id>
-
-# List attachments on an issue
-lin attachment list --issue ENG-123
-
-# Upload a file as an attachment to an issue
-lin attachment upload --issue ENG-123 /path/to/file.png
-
-# Get details of a specific attachment (includes download URL)
-lin attachment get <attachment-id>
-
-# Link a git branch to an issue
-lin issue link-branch ENG-123 feature/my-feature
-lin issue link-branch ENG-123 feature/my-feature --repo https://github.com/org/repo
-
-# Link a pull request to an issue
-lin issue link-pr ENG-123 https://github.com/org/repo/pull/42
-
-# List linked branches and PRs for an issue
-lin issue links ENG-123
-
-# Manage organizations
-lin org list
-lin org add <name>
-lin org remove <name>
-lin org set-default <name>
-
-# Validate configuration file
-lin org validate
-
-# Show current configuration (with masked tokens)
-lin org show
-
-# Search for issues
-lin search "authentication bug"
-lin search "fix login" --team ENG --limit 10
-lin search "urgent" --assignee me --state "In Progress"
-
-# List issue relations (parent, children, blocks, blocked by, related)
-lin issue relations ENG-123
-
-# Add a relation between issues
-lin issue add-relation ENG-123 ENG-456 --type blocks
-lin issue add-relation ENG-123 ENG-456 --type parent
-lin issue add-relation ENG-123 ENG-456 --type sub
-lin issue add-relation ENG-123 ENG-456 --type blocked_by
-lin issue add-relation ENG-123 ENG-456 --type related
-lin issue add-relation ENG-123 ENG-456 --type duplicate
-
-# Remove a relation
-lin issue remove-relation <relation-id>
-
-# Generate shell completions
-lin completions bash > ~/.local/share/bash-completion/completions/lin
-lin completions zsh > ~/.zfunc/_lin
-lin completions fish > ~/.config/fish/completions/lin.fish
-lin completions powershell > _lin.ps1
-lin completions elvish > lin.elv
-
-# Cache management
-lin cache status
-lin cache clear
-
-# Bypass cache for fresh data
-lin --no-cache issue list --team ENG
+lin issue create --team ENG --title "Fix bug"
+lin search "authentication"
 ```
 
 ## Shell Completions
@@ -336,56 +170,6 @@ The cache is stored in:
 - Linux: `~/.cache/lin/`
 - macOS: `~/Library/Caches/lin/`
 - Windows: `{FOLDERID_LocalAppData}/lin/`
-
-## Features
-
-| Feature | Status | Description |
-|---------|--------|-------------|
-| **Issue Management** | | |
-| List issues | ✅ | List issues with filters (team, assignee, state, limit) |
-| Get issue | ✅ | Get issue by UUID or identifier (ABC-123) |
-| Create issue | ✅ | Create issues with title, description, priority, assignee, state |
-| Update issue | ✅ | Update issue fields (title, description, priority, assignee, state) |
-| **Teams** | | |
-| List teams | ✅ | List all teams in workspace |
-| Get team | ✅ | Get team details by ID |
-| **Users** | | |
-| Current user | ✅ | Show authenticated user info |
-| List users | ✅ | List all users in workspace |
-| **Configuration** | | |
-| Multiple orgs | ✅ | Support for multiple organizations |
-| Default org | ✅ | Set a default organization |
-| Token from CLI | ✅ | Pass token via --api-token flag |
-| Token from env | ✅ | Read token from LINEAR_API_TOKEN |
-| Token from file | ✅ | Read token from config file |
-| Delete issues | ✅ | Delete an issue by ID or identifier |
-| Archive/unarchive | ✅ | Archive or unarchive issues |
-| Comments | ✅ | Add/list comments on issues |
-| Projects | ✅ | List projects, get project details, filter issues by project |
-| Cycles/Sprints | ✅ | List cycles, get cycle details with issues, filter issues by cycle |
-| Labels | ✅ | List labels, get label details, filter issues by label, add labels to issues |
-| Workflow states | ✅ | List workflow states for a team |
-| Documents | ✅ | List, get, and create documents |
-| File uploads | ✅ | Upload attachments to issues, list and get attachment details |
-| Git integration | ✅ | Link branches and PRs to issues, list git links |
-| Templates | ❌ | Bulk create issues from templates |
-| Search | ✅ | Full-text search for issues |
-| **Issue Relations** | | |
-| Issue relations | ✅ | Parent/child, blocks/blocked by, relates to, duplicate |
-| **Advanced Filtering** | | |
-| Date range filters | ✅ | Filter by created/updated date ranges |
-| Sort options | ✅ | Sort by priority, created, updated, or title with asc/desc order |
-| Combined filters | ✅ | Combine multiple filters with AND logic |
-| Priority filter | ✅ | Filter by priority level (urgent, high, normal, low, none) |
-| **CLI Experience** | | |
-| Shell completions | ✅ | Bash, zsh, fish, PowerShell, elvish completions |
-| Interactive TUI | ❌ | Interactive terminal UI for browsing |
-| Caching | ✅ | Cache responses for faster repeated queries |
-| Config validation | ✅ | Validate configuration file |
-| Examples in help | ✅ | Add usage examples to --help output |
-| Human-friendly output | ✅ | Human-readable output (default) |
-| JSON output | ✅ | Machine-readable JSON output (--json flag) |
-| Colored output | ✅ | Syntax highlighting and colors for terminal |
 
 ## Priority Values
 
