@@ -214,7 +214,7 @@ enum IssueCommands {
     #[command(after_help = "EXAMPLES:\n  \
     lin issue create --team <team-id> --title \"Fix bug\" --priority 2\n  \
     lin issue create --team <team-id> --title \"New feature\" --labels <label-id1> --labels <label-id2>\n  \
-    lin issue create --team <team-id> --title \"Project task\" --project <project-id>")]
+    lin issue create --team <team-id> --title \"Project task\" --project <project-id> --estimate M")]
     Create {
         /// Issue title
         #[arg(long)]
@@ -234,6 +234,9 @@ enum IssueCommands {
         /// Priority (0-4: 0=none, 1=urgent, 2=high, 3=normal, 4=low)
         #[arg(long)]
         priority: Option<u8>,
+        /// Estimate (numeric value or team-configured name like "XS", "S", "M", "L", "XL")
+        #[arg(long)]
+        estimate: Option<String>,
         /// Label IDs to add to the issue (can be specified multiple times)
         #[arg(long)]
         labels: Option<Vec<String>>,
@@ -246,7 +249,7 @@ enum IssueCommands {
     lin issue update ENG-123 --title \"New title\"\n  \
     lin issue update ENG-123 --state <state-id> --priority 1\n  \
     lin issue update ENG-123 --labels <label-id1> --labels <label-id2>\n  \
-    lin issue update ENG-123 --project <project-id>")]
+    lin issue update ENG-123 --project <project-id> --estimate L")]
     Update {
         /// Issue identifier (e.g., "ENG-123") or UUID
         identifier: String,
@@ -265,6 +268,9 @@ enum IssueCommands {
         /// New priority (0-4: 0=none, 1=urgent, 2=high, 3=normal, 4=low)
         #[arg(long)]
         priority: Option<u8>,
+        /// Estimate (numeric value or team-configured name like "XS", "S", "M", "L", "XL")
+        #[arg(long)]
+        estimate: Option<String>,
         /// Label IDs to set on the issue (replaces existing labels, can be specified multiple times)
         #[arg(long)]
         labels: Option<Vec<String>>,
@@ -795,6 +801,7 @@ fn handle_issue_command(
             assignee,
             state,
             priority,
+            estimate,
             labels,
             project,
         } => {
@@ -813,6 +820,17 @@ fn handle_issue_command(
                 None
             };
 
+            // Resolve estimate name to numeric value if provided
+            let estimate_value = if let Some(est) = estimate {
+                Some(resolvers::resolve_estimate_value(
+                    &est,
+                    Some(&team),
+                    use_cache,
+                )?)
+            } else {
+                None
+            };
+
             let options = issue::IssueCreateOptions {
                 title,
                 team_id,
@@ -820,6 +838,7 @@ fn handle_issue_command(
                 assignee_id: assignee,
                 state_id,
                 priority: priority.map(|p| p as i32),
+                estimate: estimate_value,
                 label_ids: labels,
                 project_id: project,
             };
@@ -832,46 +851,64 @@ fn handle_issue_command(
             assignee,
             state,
             priority,
+            estimate,
             labels,
             project,
         } => {
+            // We may need team context for state or estimate resolution
+            let team_key_opt = if state.is_some() || estimate.is_some() {
+                // Resolve identifier to UUID if needed to get team context
+                let issue_id = if issue::is_uuid(&identifier) {
+                    identifier.clone()
+                } else {
+                    // Parse identifier and look up issue
+                    let (team_key, number) = issue::parse_identifier(&identifier)?;
+                    let lookup_variables = serde_json::json!({
+                        "filter": {
+                            "team": { "key": { "eq": team_key } },
+                            "number": { "eq": number }
+                        }
+                    });
+                    let lookup_response: lin::models::IssuesResponse = client.query(
+                        lin::api::queries::issue::ISSUE_BY_IDENTIFIER_QUERY,
+                        lookup_variables,
+                    )?;
+                    if lookup_response.issues.nodes.is_empty() {
+                        return Err(LinError::api(format!("Issue '{}' not found", identifier)));
+                    }
+                    lookup_response.issues.nodes[0].id.clone()
+                };
+
+                // Get team context
+                let team_id = resolvers::get_issue_team_id(&client, &issue_id)?;
+                Some(resolvers::get_team_key(&client, &team_id)?)
+            } else {
+                None
+            };
+
             // Resolve state name to state ID if provided and not already a UUID
             let state_id = if let Some(state_name) = state {
                 if issue::is_uuid(&state_name) {
                     Some(state_name)
                 } else {
-                    // First resolve identifier to UUID if needed
-                    let issue_id = if issue::is_uuid(&identifier) {
-                        identifier.clone()
-                    } else {
-                        // Parse identifier and look up issue
-                        let (team_key, number) = issue::parse_identifier(&identifier)?;
-                        let lookup_variables = serde_json::json!({
-                            "filter": {
-                                "team": { "key": { "eq": team_key } },
-                                "number": { "eq": number }
-                            }
-                        });
-                        let lookup_response: lin::models::IssuesResponse = client.query(
-                            lin::api::queries::issue::ISSUE_BY_IDENTIFIER_QUERY,
-                            lookup_variables,
-                        )?;
-                        if lookup_response.issues.nodes.is_empty() {
-                            return Err(LinError::api(format!("Issue '{}' not found", identifier)));
-                        }
-                        lookup_response.issues.nodes[0].id.clone()
-                    };
-
-                    // Get issue's team ID to resolve state
-                    let team_id = resolvers::get_issue_team_id(&client, &issue_id)?;
-                    let team_key = resolvers::get_team_key(&client, &team_id)?;
+                    let team_key = team_key_opt.as_ref().unwrap();
                     Some(resolvers::resolve_state_id(
                         &client,
-                        &team_key,
+                        team_key,
                         &state_name,
                         use_cache,
                     )?)
                 }
+            } else {
+                None
+            };
+
+            // Resolve estimate name to numeric value if provided
+            let estimate_value = if let Some(est) = estimate {
+                let team_key = team_key_opt.as_deref();
+                Some(resolvers::resolve_estimate_value(
+                    &est, team_key, use_cache,
+                )?)
             } else {
                 None
             };
@@ -882,6 +919,7 @@ fn handle_issue_command(
                 assignee_id: assignee,
                 state_id,
                 priority: priority.map(|p| p as i32),
+                estimate: estimate_value,
                 label_ids: labels,
                 project_id: project,
             };
