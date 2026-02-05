@@ -24,128 +24,95 @@ lin update --check      # Check if update is available
 
 ## Authentication
 
-lin supports multiple authentication methods (in order of priority):
+Get your API token from [Linear Settings → API](https://linear.app/settings/api).
 
-1. `--api-token <token>` CLI flag
-2. `LINEAR_API_TOKEN` environment variable
-3. `~/.config/lin/config.json` configuration file
-
-To set up authentication:
+### First Time Setup
 
 ```bash
-# Using environment variable
+lin auth work lin_api_...
+```
+
+This will:
+- Validate your token
+- Store it securely in `~/.config/lin/config.json`
+- Automatically sync all teams and workflow states
+
+### Multi-Organization Support
+
+You can authenticate with multiple Linear organizations:
+
+```bash
+# Add your work organization
+lin auth work lin_api_xxx
+
+# Add your personal organization
+lin auth personal lin_api_yyy
+
+# Switch between them
+lin auth switch personal
+
+# List all organizations (* = active)
+lin auth list
+
+# Show current status
+lin auth
+```
+
+### CI/CD and Automation
+
+For CI/CD pipelines and scripts, use the `LINEAR_API_TOKEN` environment variable:
+
+```bash
 export LINEAR_API_TOKEN="lin_api_..."
-
-# Or add a token via CLI
-lin config set token lin_api_...
-
-# For multiple organizations
-lin config set token lin_api_... --org my-org
-lin config set default-org my-org
+lin issue list  # No authentication required
 ```
 
-## Configuration Management
+This bypasses the auth system and works immediately.
 
-The `lin config` command provides a git-style interface for managing all configuration, with support for both global and project-local configs.
+## Organization Management
 
-### Configuration Hierarchy
+The `lin auth` command manages your Linear organizations and credentials.
 
-lin supports two levels of configuration:
-
-1. **Global config**: `~/.config/lin/config.json` (or OS-equivalent)
-2. **Local config**: `.lin/config.json` in your project directory
-
-Local config takes precedence over global config. Settings are merged, with local values overriding global ones for the same organization.
-
-### Basic Configuration
+### Authentication Commands
 
 ```bash
-# Set a token (creates default organization)
-lin config set token lin_api_...
+# Authenticate with an organization (and sync data)
+lin auth <name> <token>
 
-# Get the current token (masked)
-lin config get token
+# Show current organization status
+lin auth
 
-# List all configuration
-lin config list
+# List all organizations
+lin auth list
 
-# Show where each setting comes from
-lin config list --show-origin
+# Switch active organization
+lin auth switch <name>
 
-# Validate configuration file
-lin config validate
+# Remove an organization
+lin auth remove <name>
+
+# Manually refresh teams and workflow states
+lin auth sync
 ```
 
-### Local vs Global Config
+### Intelligent Caching
+
+When you authenticate, lin automatically caches your teams and workflow states:
 
 ```bash
-# Set token in global config (available everywhere)
-lin config set token lin_api_xxx --global
-
-# Set token in local config (project-specific)
-# First create .lin directory or use --local flag
-mkdir .lin
-lin config set token lin_api_yyy --local
-
-# Without --global or --local:
-# - Uses local config if .lin/ exists
-# - Falls back to global config otherwise
-lin config set token lin_api_zzz
+lin auth work lin_api_xxx
+# ✓ Authenticated as 'work'
+# ✓ Synced 3 teams: ENG, DESIGN, PRODUCT
+# ✓ Cached 15 workflow states
 ```
 
-### Multi-Organization Setup
+This enables:
+- **Fast team resolution**: Use `--team ENG` instead of UUIDs
+- **Ergonomic state names**: Use `--state "todo"` instead of state UUIDs
+- **Zero API calls**: Team and state lookups use local cache
+- **Auto-refresh**: Cache updates automatically on errors
 
-```bash
-# Add tokens for multiple organizations
-lin config set token lin_api_xxx --org work
-lin config set token lin_api_yyy --org personal
-
-# Set default organization
-lin config set default-org work
-
-# Get default organization
-lin config get default-org
-
-# Get token for specific org
-lin config get token --org personal
-
-# List specific organization
-lin config list --org work
-```
-
-### Removing Configuration
-
-```bash
-# Remove a token (removes the entire organization)
-lin config unset token --org personal
-
-# Remove from specific config
-lin config unset token --org work --global
-lin config unset token --org personal --local
-
-# Clear default organization (keeps orgs)
-lin config unset default-org
-```
-
-### JSON Output
-
-Use `--json` for machine-readable output:
-
-```bash
-# Get full token in JSON (not masked)
-lin config get token --json
-
-# List all config in JSON
-lin config list --json
-```
-
-### Use Cases for Local Config
-
-Local config is useful for:
-- **Multi-team projects**: Different Linear workspaces per project
-- **Client work**: Separate tokens per client project
-- **Testing**: Use test workspace tokens without affecting global config
-- **Team settings**: Check in `.lin/config.json` (without tokens) for team defaults
+The cache is stored in `~/.config/lin/config.json` alongside your tokens.
 
 ## Usage
 
@@ -155,6 +122,7 @@ Run `lin --help` for full documentation. Each subcommand also supports `--help` 
 
 | Command | Description |
 |---------|-------------|
+| `lin auth` | Authenticate and manage organizations |
 | `lin issue` | List, create, update, delete, archive issues |
 | `lin team` | List and get team details |
 | `lin user` | Show current user or list all users |
@@ -165,16 +133,25 @@ Run `lin --help` for full documentation. Each subcommand also supports `--help` 
 | `lin document` | List, get, and create documents |
 | `lin attachment` | List, get, and upload attachments |
 | `lin search` | Full-text search for issues |
-| `lin config` | Manage configuration (tokens, orgs) |
 | `lin cache` | View cache status or clear cache |
 | `lin completions` | Generate shell completions |
 
 ### Quick Examples
 
 ```bash
-lin issue list --team ENG --assignee me
+# List issues using team key and state name
+lin issue list --team ENG --state "in progress" --assignee me
+
+# Get issue details
 lin issue get ENG-123
-lin issue create --team ENG --title "Fix bug"
+
+# Create issue with ergonomic names
+lin issue create --team ENG --title "Fix bug" --state "todo" --priority high
+
+# Update issue state by name (case-insensitive)
+lin issue update ENG-123 --state "done"
+
+# Search for issues
 lin search "authentication"
 ```
 
@@ -233,53 +210,64 @@ lin completions elvish > ~/.elvish/lib/lin.elv
 # use lin
 ```
 
-## Caching
+## Ergonomic Team and State Names
 
-lin caches API responses locally to speed up repeated queries. The cache is stored in `~/.cache/lin/` (or the platform-appropriate cache directory).
+lin caches your organization's teams and workflow states for fast, user-friendly commands.
 
-### Cache TTLs
+### Team Keys
 
-Different data types have different cache lifetimes based on how frequently they change:
-
-| Data Type | TTL | Rationale |
-|-----------|-----|-----------|
-| Teams | 1 hour | Teams rarely change |
-| Users | 1 hour | User list is stable |
-| Workflow states | 1 hour | Workflow configuration rarely changes |
-| Labels | 30 minutes | Labels change occasionally |
-| Projects | 15 minutes | Projects change moderately |
-| Cycles | 15 minutes | Cycle data changes moderately |
-| Documents | 10 minutes | Documents are edited more frequently |
-| Issues | 5 minutes | Issues change frequently |
-| Comments | 5 minutes | Comments are added frequently |
-| Search results | 2 minutes | Search should return fresh results |
-
-### Cache Commands
+Use short team keys instead of UUIDs:
 
 ```bash
-# View cache statistics (size, entries, expired entries)
-lin cache status
+# Before: Required UUID
+lin issue create --team a1b2c3d4-... --title "Task"
 
-# Clear all cached entries
-lin cache clear
+# After: Use team key
+lin issue create --team ENG --title "Task"
 ```
 
-### Bypassing the Cache
+### State Names
 
-Use the `--no-cache` flag to bypass the cache and fetch fresh data from the API:
+Use natural state names (case-insensitive):
 
 ```bash
-# Fetch fresh data, ignoring any cached responses
+# All of these work
+lin issue create --team ENG --state "todo" --title "Task"
+lin issue update ENG-123 --state "in progress"
+lin issue update ENG-123 --state "IN PROGRESS"
+lin issue update ENG-123 --state "Done"
+```
+
+### How It Works
+
+When you authenticate, lin automatically:
+1. Fetches all teams and their workflow states
+2. Caches them in `~/.config/lin/config.json`
+3. Uses the cache for instant resolution (zero API calls)
+4. Auto-refreshes on errors or with `lin auth sync`
+
+### Caching
+
+lin also caches API responses to speed up repeated queries. The cache is stored in `~/.cache/lin/` (or the platform-appropriate cache directory).
+
+**Cache TTLs** by data type:
+- Teams, Users, Workflow states: 1 hour
+- Labels: 30 minutes
+- Projects, Cycles: 15 minutes
+- Documents: 10 minutes
+- Issues, Comments: 5 minutes
+- Search results: 2 minutes
+
+**Cache Commands:**
+```bash
+lin cache status  # View cache statistics
+lin cache clear   # Clear all cached entries
+```
+
+**Bypass cache:**
+```bash
 lin --no-cache issue list --team ENG
-lin --no-cache team list
 ```
-
-### Cache Location
-
-The cache is stored in:
-- Linux: `~/.cache/lin/`
-- macOS: `~/Library/Caches/lin/`
-- Windows: `{FOLDERID_LocalAppData}/lin/`
 
 ## Priority Values
 
