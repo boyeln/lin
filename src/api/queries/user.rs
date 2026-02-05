@@ -11,6 +11,8 @@ query Viewer {
         id
         name
         email
+        displayName
+        active
     }
 }
 "#;
