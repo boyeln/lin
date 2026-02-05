@@ -4,7 +4,7 @@
 
 mod common;
 
-use lin::api::queries;
+use lin::api::queries::project::PROJECTS_QUERY;
 use lin::models::ProjectsResponse;
 
 /// Test that we can list projects in the organization.
@@ -20,7 +20,7 @@ fn test_project_list() {
     let variables = serde_json::json!({});
 
     let response: ProjectsResponse = client
-        .query(queries::PROJECTS_QUERY, variables)
+        .query(PROJECTS_QUERY, variables)
         .expect("Should be able to list projects");
 
     // Projects might be empty for new workspaces, which is valid

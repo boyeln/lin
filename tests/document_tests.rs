@@ -4,7 +4,7 @@
 
 mod common;
 
-use lin::api::queries;
+use lin::api::queries::document::{DOCUMENTS_QUERY, DOCUMENT_QUERY};
 use lin::models::DocumentsResponse;
 
 /// Test that we can list documents in the organization.
@@ -20,7 +20,7 @@ fn test_document_list() {
     let variables = serde_json::json!({});
 
     let response: DocumentsResponse = client
-        .query(queries::DOCUMENTS_QUERY, variables)
+        .query(DOCUMENTS_QUERY, variables)
         .expect("Should be able to list documents");
 
     // Documents might be empty for new workspaces, which is valid
@@ -56,7 +56,7 @@ fn test_document_get() {
     // First, list documents to find one to fetch
     let list_variables = serde_json::json!({});
     let list_response: lin::models::DocumentsResponse = client
-        .query(queries::DOCUMENTS_QUERY, list_variables)
+        .query(DOCUMENTS_QUERY, list_variables)
         .expect("Should be able to list documents");
 
     // Skip if no documents exist
@@ -72,7 +72,7 @@ fn test_document_get() {
     });
 
     let get_response: DocumentResponse = client
-        .query(queries::DOCUMENT_QUERY, get_variables)
+        .query(DOCUMENT_QUERY, get_variables)
         .expect("Should be able to get the document");
 
     assert_eq!(get_response.document.id, first_doc.id);

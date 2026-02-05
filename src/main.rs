@@ -689,8 +689,10 @@ fn handle_issue_command(
         } => {
             // If assignee is "me", we need to fetch the viewer ID first
             let viewer_id = if assignee.as_deref() == Some("me") {
-                let response: lin::models::ViewerResponse =
-                    client.query(lin::api::queries::VIEWER_QUERY, serde_json::json!({}))?;
+                let response: lin::models::ViewerResponse = client.query(
+                    lin::api::queries::organization::VIEWER_QUERY,
+                    serde_json::json!({}),
+                )?;
                 Some(response.viewer.id)
             } else {
                 None
@@ -1012,8 +1014,10 @@ fn handle_search_command(
 
     // If assignee is "me", we need to fetch the viewer ID first
     let viewer_id = if assignee.as_deref() == Some("me") {
-        let response: lin::models::ViewerResponse =
-            client.query(lin::api::queries::VIEWER_QUERY, serde_json::json!({}))?;
+        let response: lin::models::ViewerResponse = client.query(
+            lin::api::queries::organization::VIEWER_QUERY,
+            serde_json::json!({}),
+        )?;
         Some(response.viewer.id)
     } else {
         None

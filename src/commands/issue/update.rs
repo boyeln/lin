@@ -1,6 +1,7 @@
 //! Update operations for issues.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::issue::{ISSUE_BY_IDENTIFIER_QUERY, ISSUE_UPDATE_MUTATION};
+use crate::api::GraphQLClient;
 use crate::error::LinError;
 use crate::models::{IssueUpdateResponse, IssuesResponse};
 use crate::output::{output, OutputFormat};
@@ -59,7 +60,7 @@ pub fn update_issue(
         });
 
         let lookup_response: IssuesResponse =
-            client.query(queries::ISSUE_BY_IDENTIFIER_QUERY, lookup_variables)?;
+            client.query(ISSUE_BY_IDENTIFIER_QUERY, lookup_variables)?;
 
         if lookup_response.issues.nodes.is_empty() {
             return Err(LinError::api(format!(
@@ -103,7 +104,7 @@ pub fn update_issue(
         "input": input
     });
 
-    let response: IssueUpdateResponse = client.query(queries::ISSUE_UPDATE_MUTATION, variables)?;
+    let response: IssueUpdateResponse = client.query(ISSUE_UPDATE_MUTATION, variables)?;
 
     if !response.issue_update.success {
         return Err(LinError::api("Failed to update issue"));

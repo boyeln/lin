@@ -5,7 +5,11 @@
 
 mod common;
 
-use lin::api::queries;
+use lin::api::queries::issue::{
+    ISSUE_CREATE_MUTATION, ISSUE_RELATIONS_QUERY, ISSUE_RELATION_CREATE_MUTATION,
+    ISSUE_RELATION_DELETE_MUTATION,
+};
+use lin::api::queries::team::TEAMS_QUERY;
 use lin::models::{
     IssueCreateResponse, IssueRelationCreateResponse, IssueRelationDeleteResponse,
     IssueRelationsResponse, TeamsResponse,
@@ -26,7 +30,7 @@ fn test_relation_lifecycle() {
 
     // First, get a team to create the issues in
     let teams_response: TeamsResponse = client
-        .query(queries::TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .query(TEAMS_QUERY, serde_json::json!({"first": 1}))
         .expect("Should be able to list teams");
 
     assert!(
@@ -65,7 +69,7 @@ fn test_relation_lifecycle() {
     });
 
     let blocking_response: IssueCreateResponse = client
-        .query(queries::ISSUE_CREATE_MUTATION, create_blocking)
+        .query(ISSUE_CREATE_MUTATION, create_blocking)
         .expect("Should be able to create blocking issue");
 
     assert!(
@@ -99,7 +103,7 @@ fn test_relation_lifecycle() {
     });
 
     let blocked_response: IssueCreateResponse = client
-        .query(queries::ISSUE_CREATE_MUTATION, create_blocked)
+        .query(ISSUE_CREATE_MUTATION, create_blocked)
         .expect("Should be able to create blocked issue");
 
     assert!(
@@ -137,7 +141,7 @@ fn test_relation_lifecycle() {
         });
 
         let relation_response: IssueRelationCreateResponse = client
-            .query(queries::ISSUE_RELATION_CREATE_MUTATION, relation_variables)
+            .query(ISSUE_RELATION_CREATE_MUTATION, relation_variables)
             .expect("Should be able to create relation");
 
         assert!(
@@ -169,7 +173,7 @@ fn test_relation_lifecycle() {
         });
 
         let list_response: IssueRelationsResponse = client
-            .query(queries::ISSUE_RELATIONS_QUERY, list_variables)
+            .query(ISSUE_RELATIONS_QUERY, list_variables)
             .expect("Should be able to list relations");
 
         assert!(
@@ -204,7 +208,7 @@ fn test_relation_lifecycle() {
         });
 
         let delete_response: IssueRelationDeleteResponse = client
-            .query(queries::ISSUE_RELATION_DELETE_MUTATION, delete_variables)
+            .query(ISSUE_RELATION_DELETE_MUTATION, delete_variables)
             .expect("Should be able to delete relation");
 
         assert!(
@@ -217,7 +221,7 @@ fn test_relation_lifecycle() {
         // Verify relation is gone
         let verify_response: IssueRelationsResponse = client
             .query(
-                queries::ISSUE_RELATIONS_QUERY,
+                ISSUE_RELATIONS_QUERY,
                 serde_json::json!({"id": &blocking_id}),
             )
             .expect("Should be able to list relations after deletion");

@@ -3,7 +3,11 @@
 //! Commands for listing, adding, and removing relations between Linear issues.
 //! Supports parent/child, blocks/blocked by, and related relationships.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::issue::{
+    ISSUE_BY_IDENTIFIER_QUERY, ISSUE_RELATIONS_QUERY, ISSUE_RELATION_CREATE_MUTATION,
+    ISSUE_RELATION_DELETE_MUTATION, ISSUE_SET_PARENT_MUTATION,
+};
+use crate::api::GraphQLClient;
 use crate::error::LinError;
 use crate::models::{
     IssueRelationCreateResponse, IssueRelationDeleteResponse, IssueRelationsResponse,
@@ -85,8 +89,7 @@ pub fn list_relations(
         "id": issue_id
     });
 
-    let response: IssueRelationsResponse =
-        client.query(queries::ISSUE_RELATIONS_QUERY, variables)?;
+    let response: IssueRelationsResponse = client.query(ISSUE_RELATIONS_QUERY, variables)?;
 
     // Normalize all relations into a unified list for display
     let mut relations: Vec<NormalizedRelation> = Vec::new();
@@ -194,7 +197,7 @@ pub fn add_relation(
             });
 
             let response: IssueRelationCreateResponse =
-                client.query(queries::ISSUE_RELATION_CREATE_MUTATION, variables)?;
+                client.query(ISSUE_RELATION_CREATE_MUTATION, variables)?;
 
             if !response.issue_relation_create.success {
                 return Err(LinError::api("Failed to create relation"));
@@ -251,7 +254,7 @@ pub fn remove_relation(
     });
 
     let response: IssueRelationDeleteResponse =
-        client.query(queries::ISSUE_RELATION_DELETE_MUTATION, variables)?;
+        client.query(ISSUE_RELATION_DELETE_MUTATION, variables)?;
 
     if !response.issue_relation_delete.success {
         return Err(LinError::api("Failed to delete relation"));
@@ -304,8 +307,7 @@ fn set_parent(
         }
     });
 
-    let response: IssueSetParentResponse =
-        client.query(queries::ISSUE_SET_PARENT_MUTATION, variables)?;
+    let response: IssueSetParentResponse = client.query(ISSUE_SET_PARENT_MUTATION, variables)?;
 
     if !response.issue_update.success {
         return Err(LinError::api("Failed to set parent"));
@@ -372,7 +374,7 @@ fn resolve_issue_id(client: &GraphQLClient, id_or_identifier: &str) -> Result<St
         });
 
         let lookup_response: IssuesResponse =
-            client.query(queries::ISSUE_BY_IDENTIFIER_QUERY, lookup_variables)?;
+            client.query(ISSUE_BY_IDENTIFIER_QUERY, lookup_variables)?;
 
         if lookup_response.issues.nodes.is_empty() {
             return Err(LinError::api(format!(

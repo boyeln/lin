@@ -1,6 +1,9 @@
 //! Delete and archive operations for issues.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::issue::{
+    ISSUE_ARCHIVE_MUTATION, ISSUE_DELETE_MUTATION, ISSUE_UNARCHIVE_MUTATION,
+};
+use crate::api::GraphQLClient;
 use crate::error::LinError;
 use crate::models::{IssueArchiveResponse, IssueDeleteResponse, IssueUnarchiveResponse};
 use crate::output::{output, OutputFormat};
@@ -39,7 +42,7 @@ pub fn delete_issue(
     let issue_id = resolve_issue_id(client, id_or_identifier)?;
 
     let variables = serde_json::json!({ "id": issue_id });
-    let response: IssueDeleteResponse = client.query(queries::ISSUE_DELETE_MUTATION, variables)?;
+    let response: IssueDeleteResponse = client.query(ISSUE_DELETE_MUTATION, variables)?;
 
     if !response.issue_delete.success {
         return Err(LinError::api("Failed to delete issue"));
@@ -83,8 +86,7 @@ pub fn archive_issue(
     let issue_id = resolve_issue_id(client, id_or_identifier)?;
 
     let variables = serde_json::json!({ "id": issue_id });
-    let response: IssueArchiveResponse =
-        client.query(queries::ISSUE_ARCHIVE_MUTATION, variables)?;
+    let response: IssueArchiveResponse = client.query(ISSUE_ARCHIVE_MUTATION, variables)?;
 
     if !response.issue_archive.success {
         return Err(LinError::api("Failed to archive issue"));
@@ -128,8 +130,7 @@ pub fn unarchive_issue(
     let issue_id = resolve_issue_id(client, id_or_identifier)?;
 
     let variables = serde_json::json!({ "id": issue_id });
-    let response: IssueUnarchiveResponse =
-        client.query(queries::ISSUE_UNARCHIVE_MUTATION, variables)?;
+    let response: IssueUnarchiveResponse = client.query(ISSUE_UNARCHIVE_MUTATION, variables)?;
 
     if !response.issue_unarchive.success {
         return Err(LinError::api("Failed to unarchive issue"));

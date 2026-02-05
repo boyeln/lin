@@ -4,7 +4,8 @@
 
 mod common;
 
-use lin::api::queries;
+use lin::api::queries::attachment::ISSUE_GIT_LINKS_QUERY;
+use lin::api::queries::issue::ISSUES_QUERY;
 use lin::models::IssueAttachmentsResponse;
 
 /// Test that we can list git links (attachments) on an issue.
@@ -26,7 +27,7 @@ fn test_git_links_list() {
     });
 
     let issues_response: IssuesResponse = client
-        .query(queries::ISSUES_QUERY, issues_variables)
+        .query(ISSUES_QUERY, issues_variables)
         .expect("Should be able to list issues");
 
     if issues_response.issues.nodes.is_empty() {
@@ -43,7 +44,7 @@ fn test_git_links_list() {
     });
 
     let response: IssueAttachmentsResponse = client
-        .query(queries::ISSUE_GIT_LINKS_QUERY, variables)
+        .query(ISSUE_GIT_LINKS_QUERY, variables)
         .expect("Should be able to list attachments/git links");
 
     println!(

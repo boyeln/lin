@@ -31,32 +31,13 @@ pub mod team;
 pub mod user;
 pub mod workflow;
 
-// Re-export all queries for backward compatibility
-pub use attachment::{
-    ATTACHMENT_CREATE_MUTATION, ATTACHMENT_QUERY, FILE_UPLOAD_CREATE_MUTATION,
-    ISSUE_ATTACHMENTS_QUERY, ISSUE_GIT_LINKS_QUERY,
-};
-pub use comment::COMMENT_CREATE_MUTATION;
-pub use cycle::{CYCLES_QUERY, CYCLE_QUERY};
-pub use document::{DOCUMENTS_QUERY, DOCUMENT_CREATE_MUTATION, DOCUMENT_QUERY};
-pub use issue::{
-    ISSUES_QUERY, ISSUE_ARCHIVE_MUTATION, ISSUE_BY_IDENTIFIER_QUERY,
-    ISSUE_BY_IDENTIFIER_WITH_COMMENTS_QUERY, ISSUE_COMMENTS_QUERY, ISSUE_CREATE_MUTATION,
-    ISSUE_DELETE_MUTATION, ISSUE_QUERY, ISSUE_RELATIONS_QUERY, ISSUE_RELATION_CREATE_MUTATION,
-    ISSUE_RELATION_DELETE_MUTATION, ISSUE_SET_PARENT_MUTATION, ISSUE_UNARCHIVE_MUTATION,
-    ISSUE_UPDATE_MUTATION, ISSUE_WITH_COMMENTS_QUERY,
-};
-pub use label::{LABELS_QUERY, LABEL_QUERY, TEAM_LABELS_QUERY};
-pub use organization::VIEWER_QUERY;
-pub use project::{PROJECTS_QUERY, PROJECT_QUERY};
-pub use search::ISSUE_SEARCH_QUERY;
-pub use team::{TEAMS_QUERY, TEAM_QUERY};
-pub use user::USERS_QUERY;
-pub use workflow::WORKFLOW_STATES_QUERY;
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::organization::VIEWER_QUERY;
+    use super::project::{PROJECTS_QUERY, PROJECT_QUERY};
+    use super::team::{TEAMS_QUERY, TEAM_QUERY};
+    use super::user::USERS_QUERY;
+    use super::workflow::WORKFLOW_STATES_QUERY;
 
     #[test]
     fn test_viewer_query_is_valid() {

@@ -3,7 +3,8 @@
 //! This module provides shared helpers for integration tests that run
 //! against the real Linear API.
 
-use lin::api::{queries, GraphQLClient};
+use lin::api::queries::issue::ISSUE_DELETE_MUTATION;
+use lin::api::GraphQLClient;
 use lin::models::IssueDeleteResponse;
 
 /// Test prefix for issues created during tests.
@@ -28,7 +29,7 @@ pub fn delete_issue(client: &GraphQLClient, issue_id: &str) -> Result<bool, Stri
     });
 
     let response: IssueDeleteResponse = client
-        .query(queries::ISSUE_DELETE_MUTATION, variables)
+        .query(ISSUE_DELETE_MUTATION, variables)
         .map_err(|e| format!("Failed to delete issue: {}", e))?;
 
     Ok(response.issue_delete.success)
