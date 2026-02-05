@@ -130,7 +130,6 @@ Run `lin --help` for full documentation. Each subcommand also supports `--help` 
 | `lin cycle` | List and get cycle/sprint details |
 | `lin label` | List and get labels |
 | `lin workflow` | List workflow states for a team |
-| `lin document` | List, get, and create documents |
 | `lin attachment` | List, get, and upload attachments |
 | `lin search` | Full-text search for issues |
 | `lin completions` | Generate shell completions |
@@ -253,7 +252,6 @@ lin also caches API responses to speed up repeated queries. The cache is stored 
 - Teams, Users, Workflow states: 1 hour
 - Labels: 30 minutes
 - Projects, Cycles: 15 minutes
-- Documents: 10 minutes
 - Issues, Comments: 5 minutes
 - Search results: 2 minutes
 

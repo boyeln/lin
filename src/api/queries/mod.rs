@@ -13,7 +13,6 @@
 //! - [`comment`] - Comment mutations
 //! - [`cycle`] - Cycle/sprint queries
 //! - [`label`] - Label queries
-//! - [`document`] - Document queries and mutations
 //! - [`attachment`] - Attachment queries and mutations
 //! - [`workflow`] - Workflow state queries
 //! - [`search`] - Search queries
@@ -21,7 +20,6 @@
 pub mod attachment;
 pub mod comment;
 pub mod cycle;
-pub mod document;
 pub mod issue;
 pub mod label;
 pub mod organization;
