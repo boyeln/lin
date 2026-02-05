@@ -74,7 +74,10 @@ fn test_project_get() {
     let first_project = &projects_response.projects.nodes[0];
     let project_id = &first_project.id;
 
-    println!("Testing get for project: {} ({})", first_project.name, project_id);
+    println!(
+        "Testing get for project: {} ({})",
+        first_project.name, project_id
+    );
 
     // Get the project by ID
     let variables = serde_json::json!({

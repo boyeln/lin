@@ -94,5 +94,8 @@ fn test_label_get() {
         "Label color should match"
     );
 
-    println!("Successfully retrieved label: {}", response.issue_label.name);
+    println!(
+        "Successfully retrieved label: {}",
+        response.issue_label.name
+    );
 }

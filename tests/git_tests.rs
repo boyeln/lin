@@ -120,7 +120,11 @@ fn test_link_branch() {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    let issue_title = format!("{} Git Branch Test {}", common::TEST_ISSUE_PREFIX, timestamp);
+    let issue_title = format!(
+        "{} Git Branch Test {}",
+        common::TEST_ISSUE_PREFIX,
+        timestamp
+    );
 
     // --- Step 1: Create Issue ---
     println!("Creating issue: {}", issue_title);
@@ -313,7 +317,10 @@ fn test_link_pr() {
     // Use a closure to ensure cleanup runs even if assertions fail
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         // --- Step 2: Link a PR ---
-        let pr_url = format!("https://github.com/test-org/test-repo/pull/{}", timestamp % 1000);
+        let pr_url = format!(
+            "https://github.com/test-org/test-repo/pull/{}",
+            timestamp % 1000
+        );
         let pr_title = format!("PR #{}", timestamp % 1000);
 
         println!("Linking PR: {}", pr_url);
