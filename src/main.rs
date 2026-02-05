@@ -572,6 +572,14 @@ enum OrgCommands {
         /// Name of the organization to set as default
         name: String,
     },
+    /// Validate the configuration file
+    #[command(after_help = "EXAMPLES:\n  \
+    lin config validate")]
+    Validate,
+    /// Show the current configuration (with masked tokens)
+    #[command(after_help = "EXAMPLES:\n  \
+    lin config show")]
+    Show,
     /// Get information about the current Linear organization (requires API token)
     #[command(after_help = "EXAMPLES:\n  \
     lin org info")]
@@ -974,6 +982,8 @@ fn handle_org_command(command: &OrgCommands, cli: &Cli, format: OutputFormat) ->
         OrgCommands::Remove { name } => org::remove_org(name, format),
         OrgCommands::List => org::list_orgs(format),
         OrgCommands::SetDefault { name } => org::set_default_org(name, format),
+        OrgCommands::Validate => org::validate_config(format),
+        OrgCommands::Show => org::show_config(format),
         OrgCommands::Info => {
             // Info requires API token
             let config = Config::load()?;
