@@ -1,6 +1,7 @@
 //! Create operations for issues.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::issue::ISSUE_CREATE_MUTATION;
+use crate::api::GraphQLClient;
 use crate::error::LinError;
 use crate::models::IssueCreateResponse;
 use crate::output::{output, OutputFormat};
@@ -74,7 +75,7 @@ pub fn create_issue(
         "input": input
     });
 
-    let response: IssueCreateResponse = client.query(queries::ISSUE_CREATE_MUTATION, variables)?;
+    let response: IssueCreateResponse = client.query(ISSUE_CREATE_MUTATION, variables)?;
 
     if !response.issue_create.success {
         return Err(LinError::api("Failed to create issue"));

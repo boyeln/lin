@@ -4,7 +4,8 @@
 
 mod common;
 
-use lin::api::queries;
+use lin::api::queries::cycle::CYCLES_QUERY;
+use lin::api::queries::team::TEAMS_QUERY;
 use lin::models::{CyclesResponse, TeamsResponse};
 
 /// Test that we can list cycles for a team.
@@ -20,7 +21,7 @@ fn test_cycles_list() {
 
     // First, get a team to use for the cycles query
     let teams_response: TeamsResponse = client
-        .query(queries::TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .query(TEAMS_QUERY, serde_json::json!({"first": 1}))
         .expect("Should be able to list teams");
 
     assert!(
@@ -37,7 +38,7 @@ fn test_cycles_list() {
     });
 
     let response: CyclesResponse = client
-        .query(queries::CYCLES_QUERY, variables)
+        .query(CYCLES_QUERY, variables)
         .expect("Should be able to list cycles");
 
     // Cycles might be empty for teams without sprints, which is valid
@@ -80,7 +81,7 @@ fn test_cycles_nonexistent_team() {
         "teamId": "nonexistent-team-id-12345"
     });
 
-    let result: Result<CyclesResponse, _> = client.query(queries::CYCLES_QUERY, variables);
+    let result: Result<CyclesResponse, _> = client.query(CYCLES_QUERY, variables);
 
     assert!(
         result.is_err(),

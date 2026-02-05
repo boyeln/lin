@@ -2,7 +2,12 @@
 //!
 //! Commands for listing, uploading, and viewing attachments on Linear issues.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::attachment::{
+    ATTACHMENT_CREATE_MUTATION, ATTACHMENT_QUERY, FILE_UPLOAD_CREATE_MUTATION,
+    ISSUE_ATTACHMENTS_QUERY,
+};
+use crate::api::queries::issue::ISSUE_BY_IDENTIFIER_QUERY;
+use crate::api::GraphQLClient;
 use crate::commands::issue::is_uuid;
 use crate::error::LinError;
 use crate::models::{
@@ -68,7 +73,7 @@ fn resolve_issue_id(client: &GraphQLClient, identifier: &str) -> Result<String> 
         }
     });
 
-    let response: IssuesResponse = client.query(queries::ISSUE_BY_IDENTIFIER_QUERY, variables)?;
+    let response: IssuesResponse = client.query(ISSUE_BY_IDENTIFIER_QUERY, variables)?;
 
     response
         .issues
@@ -112,8 +117,7 @@ pub fn list_attachments(
         "id": issue_id
     });
 
-    let response: IssueAttachmentsResponse =
-        client.query(queries::ISSUE_ATTACHMENTS_QUERY, variables)?;
+    let response: IssueAttachmentsResponse = client.query(ISSUE_ATTACHMENTS_QUERY, variables)?;
     output(&response.issue.attachments.nodes, format);
     Ok(())
 }
@@ -145,7 +149,7 @@ pub fn get_attachment(client: &GraphQLClient, id: &str, format: OutputFormat) ->
     let variables = serde_json::json!({
         "id": id
     });
-    let response: AttachmentResponse = client.query(queries::ATTACHMENT_QUERY, variables)?;
+    let response: AttachmentResponse = client.query(ATTACHMENT_QUERY, variables)?;
     output(&response.attachment, format);
     Ok(())
 }
@@ -219,7 +223,7 @@ pub fn upload_attachment(
     });
 
     let upload_response: FileUploadResponse =
-        client.query(queries::FILE_UPLOAD_CREATE_MUTATION, upload_variables)?;
+        client.query(FILE_UPLOAD_CREATE_MUTATION, upload_variables)?;
 
     let upload_file = &upload_response.file_upload.upload_file;
 
@@ -260,7 +264,7 @@ pub fn upload_attachment(
     });
 
     let attachment_response: AttachmentCreateResponse =
-        client.query(queries::ATTACHMENT_CREATE_MUTATION, attachment_variables)?;
+        client.query(ATTACHMENT_CREATE_MUTATION, attachment_variables)?;
 
     if let Some(attachment) = attachment_response.attachment_create.attachment {
         output(&attachment, format);

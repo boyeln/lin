@@ -13,7 +13,8 @@ pub use delete::{archive_issue, delete_issue, unarchive_issue};
 pub use read::{get_issue, get_issue_with_comments, list_issues};
 pub use update::update_issue;
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::issue::ISSUE_BY_IDENTIFIER_QUERY;
+use crate::api::GraphQLClient;
 use crate::error::LinError;
 use crate::models::IssuesResponse;
 use crate::output::HumanDisplay;
@@ -346,7 +347,7 @@ pub(crate) fn resolve_issue_id(client: &GraphQLClient, id_or_identifier: &str) -
         });
 
         let lookup_response: IssuesResponse =
-            client.query(queries::ISSUE_BY_IDENTIFIER_QUERY, lookup_variables)?;
+            client.query(ISSUE_BY_IDENTIFIER_QUERY, lookup_variables)?;
 
         if lookup_response.issues.nodes.is_empty() {
             return Err(LinError::api(format!(

@@ -4,7 +4,7 @@
 
 mod common;
 
-use lin::api::queries;
+use lin::api::queries::organization::VIEWER_QUERY;
 use lin::models::ViewerResponse;
 
 /// Test that we can authenticate and get the current user's information.
@@ -19,7 +19,7 @@ fn test_user_me() {
     let client = common::create_client();
 
     let response: ViewerResponse = client
-        .query(queries::VIEWER_QUERY, serde_json::json!({}))
+        .query(VIEWER_QUERY, serde_json::json!({}))
         .expect("Should be able to fetch current user");
 
     // Verify we got valid user data

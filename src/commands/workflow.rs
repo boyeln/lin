@@ -2,7 +2,8 @@
 //!
 //! Commands for listing workflow states from Linear teams.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::workflow::WORKFLOW_STATES_QUERY;
+use crate::api::GraphQLClient;
 use crate::models::WorkflowStatesResponse;
 use crate::output::{output, OutputFormat};
 use crate::Result;
@@ -38,8 +39,7 @@ pub fn list_workflow_states(
     let variables = serde_json::json!({
         "id": team_id
     });
-    let response: WorkflowStatesResponse =
-        client.query(queries::WORKFLOW_STATES_QUERY, variables)?;
+    let response: WorkflowStatesResponse = client.query(WORKFLOW_STATES_QUERY, variables)?;
     output(&response.team.states.nodes, format);
     Ok(())
 }

@@ -4,7 +4,7 @@
 
 mod common;
 
-use lin::api::queries;
+use lin::api::queries::team::TEAMS_QUERY;
 use lin::models::TeamsResponse;
 
 /// Test that we can list teams in the organization.
@@ -22,7 +22,7 @@ fn test_team_list() {
     });
 
     let response: TeamsResponse = client
-        .query(queries::TEAMS_QUERY, variables)
+        .query(TEAMS_QUERY, variables)
         .expect("Should be able to list teams");
 
     // Verify we got at least one team (test account should have at least one)

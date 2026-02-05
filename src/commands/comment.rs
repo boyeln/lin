@@ -2,7 +2,9 @@
 //!
 //! Commands for listing and creating comments on Linear issues.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::comment::COMMENT_CREATE_MUTATION;
+use crate::api::queries::issue::{ISSUE_BY_IDENTIFIER_QUERY, ISSUE_COMMENTS_QUERY};
+use crate::api::GraphQLClient;
 use crate::error::LinError;
 use crate::models::{CommentCreateResponse, IssueCommentsResponse, IssuesResponse};
 use crate::output::{output, OutputFormat};
@@ -31,7 +33,7 @@ pub fn list_comments(
         "id": issue_id
     });
 
-    let response: IssueCommentsResponse = client.query(queries::ISSUE_COMMENTS_QUERY, variables)?;
+    let response: IssueCommentsResponse = client.query(ISSUE_COMMENTS_QUERY, variables)?;
 
     output(&response.issue.comments.nodes, format);
     Ok(())
@@ -61,8 +63,7 @@ pub fn create_comment(
         }
     });
 
-    let response: CommentCreateResponse =
-        client.query(queries::COMMENT_CREATE_MUTATION, variables)?;
+    let response: CommentCreateResponse = client.query(COMMENT_CREATE_MUTATION, variables)?;
 
     if !response.comment_create.success {
         return Err(LinError::api("Failed to create comment"));
@@ -95,7 +96,7 @@ fn resolve_issue_id(client: &GraphQLClient, id_or_identifier: &str) -> Result<St
         });
 
         let lookup_response: IssuesResponse =
-            client.query(queries::ISSUE_BY_IDENTIFIER_QUERY, lookup_variables)?;
+            client.query(ISSUE_BY_IDENTIFIER_QUERY, lookup_variables)?;
 
         if lookup_response.issues.nodes.is_empty() {
             return Err(LinError::api(format!(

@@ -2,7 +2,9 @@
 //!
 //! Commands for getting user information from Linear.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::organization::VIEWER_QUERY;
+use crate::api::queries::user::USERS_QUERY;
+use crate::api::GraphQLClient;
 use crate::models::{UsersResponse, ViewerResponse};
 use crate::output::{output, OutputFormat};
 use crate::Result;
@@ -31,7 +33,7 @@ use crate::Result;
 /// # }
 /// ```
 pub fn me(client: &GraphQLClient, format: OutputFormat) -> Result<()> {
-    let response: ViewerResponse = client.query(queries::VIEWER_QUERY, serde_json::json!({}))?;
+    let response: ViewerResponse = client.query(VIEWER_QUERY, serde_json::json!({}))?;
     output(&response.viewer, format);
     Ok(())
 }
@@ -59,7 +61,7 @@ pub fn me(client: &GraphQLClient, format: OutputFormat) -> Result<()> {
 /// # }
 /// ```
 pub fn list_users(client: &GraphQLClient, format: OutputFormat) -> Result<()> {
-    let response: UsersResponse = client.query(queries::USERS_QUERY, serde_json::json!({}))?;
+    let response: UsersResponse = client.query(USERS_QUERY, serde_json::json!({}))?;
     output(&response.users.nodes, format);
     Ok(())
 }

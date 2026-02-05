@@ -5,7 +5,11 @@
 
 mod common;
 
-use lin::api::queries;
+use lin::api::queries::issue::{
+    ISSUE_ARCHIVE_MUTATION, ISSUE_BY_IDENTIFIER_QUERY, ISSUE_CREATE_MUTATION,
+    ISSUE_DELETE_MUTATION, ISSUE_QUERY, ISSUE_UNARCHIVE_MUTATION, ISSUE_UPDATE_MUTATION,
+};
+use lin::api::queries::team::TEAMS_QUERY;
 use lin::models::{IssueCreateResponse, IssueResponse, IssuesResponse, TeamsResponse};
 
 /// Test the complete issue lifecycle: create -> read -> update -> delete.
@@ -24,7 +28,7 @@ fn test_issue_lifecycle() {
 
     // First, get a team to create the issue in
     let teams_response: TeamsResponse = client
-        .query(queries::TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .query(TEAMS_QUERY, serde_json::json!({"first": 1}))
         .expect("Should be able to list teams");
 
     assert!(
@@ -57,7 +61,7 @@ fn test_issue_lifecycle() {
     });
 
     let create_response: IssueCreateResponse = client
-        .query(queries::ISSUE_CREATE_MUTATION, create_variables)
+        .query(ISSUE_CREATE_MUTATION, create_variables)
         .expect("Should be able to create issue");
 
     assert!(
@@ -85,7 +89,7 @@ fn test_issue_lifecycle() {
         });
 
         let read_response: IssueResponse = client
-            .query(queries::ISSUE_QUERY, read_variables)
+            .query(ISSUE_QUERY, read_variables)
             .expect("Should be able to read issue by ID");
 
         assert_eq!(
@@ -113,7 +117,7 @@ fn test_issue_lifecycle() {
         });
 
         let read_by_id_response: IssuesResponse = client
-            .query(queries::ISSUE_BY_IDENTIFIER_QUERY, read_by_id_variables)
+            .query(ISSUE_BY_IDENTIFIER_QUERY, read_by_id_variables)
             .expect("Should be able to read issue by identifier");
 
         assert_eq!(
@@ -139,7 +143,7 @@ fn test_issue_lifecycle() {
         });
 
         let update_response: lin::models::IssueUpdateResponse = client
-            .query(queries::ISSUE_UPDATE_MUTATION, update_variables)
+            .query(ISSUE_UPDATE_MUTATION, update_variables)
             .expect("Should be able to update issue");
 
         assert!(
@@ -196,7 +200,7 @@ fn test_issue_create_and_delete() {
 
     // Get a team
     let teams_response: TeamsResponse = client
-        .query(queries::TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .query(TEAMS_QUERY, serde_json::json!({"first": 1}))
         .expect("Should be able to list teams");
 
     let team = &teams_response.teams.nodes[0];
@@ -216,7 +220,7 @@ fn test_issue_create_and_delete() {
     });
 
     let create_response: IssueCreateResponse = client
-        .query(queries::ISSUE_CREATE_MUTATION, create_variables)
+        .query(ISSUE_CREATE_MUTATION, create_variables)
         .expect("Should be able to create issue");
 
     let issue = create_response
@@ -243,7 +247,7 @@ fn test_get_nonexistent_issue() {
         "id": "00000000-0000-0000-0000-000000000000"
     });
 
-    let result: Result<IssueResponse, _> = client.query(queries::ISSUE_QUERY, variables);
+    let result: Result<IssueResponse, _> = client.query(ISSUE_QUERY, variables);
 
     assert!(result.is_err(), "Should get an error for nonexistent issue");
 
@@ -265,7 +269,7 @@ fn test_issue_archive_unarchive() {
 
     // Get a team
     let teams_response: TeamsResponse = client
-        .query(queries::TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .query(TEAMS_QUERY, serde_json::json!({"first": 1}))
         .expect("Should be able to list teams");
 
     let team = &teams_response.teams.nodes[0];
@@ -289,7 +293,7 @@ fn test_issue_archive_unarchive() {
     });
 
     let create_response: IssueCreateResponse = client
-        .query(queries::ISSUE_CREATE_MUTATION, create_variables)
+        .query(ISSUE_CREATE_MUTATION, create_variables)
         .expect("Should be able to create issue");
 
     let issue = create_response
@@ -310,7 +314,7 @@ fn test_issue_archive_unarchive() {
         let archive_variables = serde_json::json!({ "id": &issue_id });
 
         let archive_response: lin::models::IssueArchiveResponse = client
-            .query(queries::ISSUE_ARCHIVE_MUTATION, archive_variables)
+            .query(ISSUE_ARCHIVE_MUTATION, archive_variables)
             .expect("Should be able to archive issue");
 
         assert!(
@@ -326,7 +330,7 @@ fn test_issue_archive_unarchive() {
         let unarchive_variables = serde_json::json!({ "id": &issue_id });
 
         let unarchive_response: lin::models::IssueUnarchiveResponse = client
-            .query(queries::ISSUE_UNARCHIVE_MUTATION, unarchive_variables)
+            .query(ISSUE_UNARCHIVE_MUTATION, unarchive_variables)
             .expect("Should be able to unarchive issue");
 
         assert!(
@@ -373,7 +377,7 @@ fn test_issue_delete() {
 
     // Get a team
     let teams_response: TeamsResponse = client
-        .query(queries::TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .query(TEAMS_QUERY, serde_json::json!({"first": 1}))
         .expect("Should be able to list teams");
 
     let team = &teams_response.teams.nodes[0];
@@ -393,7 +397,7 @@ fn test_issue_delete() {
     });
 
     let create_response: IssueCreateResponse = client
-        .query(queries::ISSUE_CREATE_MUTATION, create_variables)
+        .query(ISSUE_CREATE_MUTATION, create_variables)
         .expect("Should be able to create issue");
 
     let issue = create_response
@@ -412,7 +416,7 @@ fn test_issue_delete() {
     let delete_variables = serde_json::json!({ "id": &issue_id });
 
     let delete_response: lin::models::IssueDeleteResponse = client
-        .query(queries::ISSUE_DELETE_MUTATION, delete_variables)
+        .query(ISSUE_DELETE_MUTATION, delete_variables)
         .expect("Should be able to delete issue");
 
     assert!(
@@ -424,7 +428,7 @@ fn test_issue_delete() {
 
     // Verify the issue is gone by trying to read it
     let read_variables = serde_json::json!({ "id": &issue_id });
-    let read_result: Result<IssueResponse, _> = client.query(queries::ISSUE_QUERY, read_variables);
+    let read_result: Result<IssueResponse, _> = client.query(ISSUE_QUERY, read_variables);
 
     // The issue should either not be found or return an error
     // Linear may return different responses for deleted issues

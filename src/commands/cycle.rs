@@ -2,7 +2,8 @@
 //!
 //! Commands for listing and viewing cycle information from Linear.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::cycle::{CYCLES_QUERY, CYCLE_QUERY};
+use crate::api::GraphQLClient;
 use crate::models::{CycleResponse, CyclesResponse};
 use crate::output::{output, OutputFormat};
 use crate::Result;
@@ -34,7 +35,7 @@ pub fn list_cycles(client: &GraphQLClient, team_id: &str, format: OutputFormat) 
     let variables = serde_json::json!({
         "teamId": team_id
     });
-    let response: CyclesResponse = client.query(queries::CYCLES_QUERY, variables)?;
+    let response: CyclesResponse = client.query(CYCLES_QUERY, variables)?;
     output(&response.team.cycles.nodes, format);
     Ok(())
 }
@@ -66,7 +67,7 @@ pub fn get_cycle(client: &GraphQLClient, id: &str, format: OutputFormat) -> Resu
     let variables = serde_json::json!({
         "id": id
     });
-    let response: CycleResponse = client.query(queries::CYCLE_QUERY, variables)?;
+    let response: CycleResponse = client.query(CYCLE_QUERY, variables)?;
     output(&response.cycle, format);
     Ok(())
 }

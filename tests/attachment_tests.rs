@@ -4,7 +4,8 @@
 
 mod common;
 
-use lin::api::queries;
+use lin::api::queries::attachment::ISSUE_ATTACHMENTS_QUERY;
+use lin::api::queries::issue::ISSUES_QUERY;
 use lin::models::IssueAttachmentsResponse;
 
 /// Test that we can list attachments on an issue.
@@ -25,7 +26,7 @@ fn test_attachment_list() {
     });
 
     let issues_response: IssuesResponse = client
-        .query(queries::ISSUES_QUERY, issues_variables)
+        .query(ISSUES_QUERY, issues_variables)
         .expect("Should be able to list issues");
 
     if issues_response.issues.nodes.is_empty() {
@@ -42,7 +43,7 @@ fn test_attachment_list() {
     });
 
     let response: IssueAttachmentsResponse = client
-        .query(queries::ISSUE_ATTACHMENTS_QUERY, variables)
+        .query(ISSUE_ATTACHMENTS_QUERY, variables)
         .expect("Should be able to list attachments");
 
     println!(

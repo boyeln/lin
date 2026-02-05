@@ -4,7 +4,7 @@
 
 mod common;
 
-use lin::api::queries;
+use lin::api::queries::label::LABELS_QUERY;
 use lin::models::LabelsResponse;
 
 /// Test that we can list labels in the workspace.
@@ -20,7 +20,7 @@ fn test_label_list() {
     let variables = serde_json::json!({});
 
     let response: LabelsResponse = client
-        .query(queries::LABELS_QUERY, variables)
+        .query(LABELS_QUERY, variables)
         .expect("Should be able to list labels");
 
     // Workspaces might not have labels, so we just verify the query succeeded

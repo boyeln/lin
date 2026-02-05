@@ -2,7 +2,8 @@
 //!
 //! Provides commands for searching issues using Linear's full-text search capability.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::search::ISSUE_SEARCH_QUERY;
+use crate::api::GraphQLClient;
 use crate::models::IssueSearchResponse;
 use crate::output::{output, OutputFormat};
 use crate::Result;
@@ -110,10 +111,8 @@ pub fn search_issues(
     );
     variables.insert("filter".to_string(), serde_json::Value::Object(filter));
 
-    let response: IssueSearchResponse = client.query(
-        queries::ISSUE_SEARCH_QUERY,
-        serde_json::Value::Object(variables),
-    )?;
+    let response: IssueSearchResponse =
+        client.query(ISSUE_SEARCH_QUERY, serde_json::Value::Object(variables))?;
 
     output(&response.issues.nodes, format);
     Ok(())

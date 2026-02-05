@@ -4,7 +4,9 @@
 //! Linear tracks these links through its attachment system, recognizing
 //! specific URL patterns for branches and PRs.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::attachment::{ATTACHMENT_CREATE_MUTATION, ISSUE_GIT_LINKS_QUERY};
+use crate::api::queries::issue::ISSUE_BY_IDENTIFIER_QUERY;
+use crate::api::GraphQLClient;
 use crate::commands::issue::is_uuid;
 use crate::error::LinError;
 use crate::models::{
@@ -132,7 +134,7 @@ fn resolve_issue_id(client: &GraphQLClient, identifier: &str) -> Result<String> 
         }
     });
 
-    let response: IssuesResponse = client.query(queries::ISSUE_BY_IDENTIFIER_QUERY, variables)?;
+    let response: IssuesResponse = client.query(ISSUE_BY_IDENTIFIER_QUERY, variables)?;
 
     response
         .issues
@@ -218,8 +220,7 @@ pub fn link_branch(
         }
     });
 
-    let response: AttachmentCreateResponse =
-        client.query(queries::ATTACHMENT_CREATE_MUTATION, variables)?;
+    let response: AttachmentCreateResponse = client.query(ATTACHMENT_CREATE_MUTATION, variables)?;
 
     if let Some(attachment) = response.attachment_create.attachment {
         let git_link: GitLink = attachment.into();
@@ -272,8 +273,7 @@ pub fn link_pr(
         }
     });
 
-    let response: AttachmentCreateResponse =
-        client.query(queries::ATTACHMENT_CREATE_MUTATION, variables)?;
+    let response: AttachmentCreateResponse = client.query(ATTACHMENT_CREATE_MUTATION, variables)?;
 
     if let Some(attachment) = response.attachment_create.attachment {
         let git_link: GitLink = attachment.into();
@@ -357,8 +357,7 @@ pub fn list_links(
         "id": issue_id
     });
 
-    let response: IssueAttachmentsResponse =
-        client.query(queries::ISSUE_GIT_LINKS_QUERY, variables)?;
+    let response: IssueAttachmentsResponse = client.query(ISSUE_GIT_LINKS_QUERY, variables)?;
 
     // Filter attachments to only include git-related links
     let git_links: Vec<GitLink> = response

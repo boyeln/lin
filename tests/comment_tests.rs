@@ -5,7 +5,11 @@
 
 mod common;
 
-use lin::api::queries;
+use lin::api::queries::comment::COMMENT_CREATE_MUTATION;
+use lin::api::queries::issue::{
+    ISSUE_COMMENTS_QUERY, ISSUE_CREATE_MUTATION, ISSUE_WITH_COMMENTS_QUERY,
+};
+use lin::api::queries::team::TEAMS_QUERY;
 use lin::models::{
     CommentCreateResponse, IssueCommentsResponse, IssueCreateResponse, IssueWithCommentsResponse,
     TeamsResponse,
@@ -26,7 +30,7 @@ fn test_comment_lifecycle() {
 
     // First, get a team to create the issue in
     let teams_response: TeamsResponse = client
-        .query(queries::TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .query(TEAMS_QUERY, serde_json::json!({"first": 1}))
         .expect("Should be able to list teams");
 
     assert!(
@@ -59,7 +63,7 @@ fn test_comment_lifecycle() {
     });
 
     let create_response: IssueCreateResponse = client
-        .query(queries::ISSUE_CREATE_MUTATION, create_variables)
+        .query(ISSUE_CREATE_MUTATION, create_variables)
         .expect("Should be able to create issue");
 
     assert!(
@@ -94,7 +98,7 @@ fn test_comment_lifecycle() {
         });
 
         let comment_response: CommentCreateResponse = client
-            .query(queries::COMMENT_CREATE_MUTATION, comment_variables)
+            .query(COMMENT_CREATE_MUTATION, comment_variables)
             .expect("Should be able to create comment");
 
         assert!(
@@ -121,7 +125,7 @@ fn test_comment_lifecycle() {
         });
 
         let list_response: IssueCommentsResponse = client
-            .query(queries::ISSUE_COMMENTS_QUERY, list_variables)
+            .query(ISSUE_COMMENTS_QUERY, list_variables)
             .expect("Should be able to list comments");
 
         assert!(
@@ -159,10 +163,7 @@ fn test_comment_lifecycle() {
         });
 
         let issue_with_comments_response: IssueWithCommentsResponse = client
-            .query(
-                queries::ISSUE_WITH_COMMENTS_QUERY,
-                issue_with_comments_variables,
-            )
+            .query(ISSUE_WITH_COMMENTS_QUERY, issue_with_comments_variables)
             .expect("Should be able to fetch issue with comments");
 
         assert_eq!(
@@ -213,7 +214,7 @@ fn test_multiple_comments() {
 
     // Get a team
     let teams_response: TeamsResponse = client
-        .query(queries::TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .query(TEAMS_QUERY, serde_json::json!({"first": 1}))
         .expect("Should be able to list teams");
 
     let team = &teams_response.teams.nodes[0];
@@ -233,7 +234,7 @@ fn test_multiple_comments() {
     });
 
     let create_response: IssueCreateResponse = client
-        .query(queries::ISSUE_CREATE_MUTATION, create_variables)
+        .query(ISSUE_CREATE_MUTATION, create_variables)
         .expect("Should be able to create issue");
 
     let issue = create_response
@@ -255,7 +256,7 @@ fn test_multiple_comments() {
             });
 
             let response: CommentCreateResponse = client
-                .query(queries::COMMENT_CREATE_MUTATION, comment_variables)
+                .query(COMMENT_CREATE_MUTATION, comment_variables)
                 .expect("Should be able to create comment");
 
             assert!(response.comment_create.success);
@@ -268,7 +269,7 @@ fn test_multiple_comments() {
         });
 
         let list_response: IssueCommentsResponse = client
-            .query(queries::ISSUE_COMMENTS_QUERY, list_variables)
+            .query(ISSUE_COMMENTS_QUERY, list_variables)
             .expect("Should be able to list comments");
 
         assert!(

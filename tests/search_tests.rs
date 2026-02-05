@@ -4,7 +4,9 @@
 
 mod common;
 
-use lin::api::queries;
+use lin::api::queries::issue::ISSUE_CREATE_MUTATION;
+use lin::api::queries::search::ISSUE_SEARCH_QUERY;
+use lin::api::queries::team::TEAMS_QUERY;
 use lin::models::{IssueCreateResponse, IssueSearchResponse, TeamsResponse};
 
 /// Test searching for issues.
@@ -18,7 +20,7 @@ fn test_search_issues() {
 
     // First, get a team to create the issue in
     let teams_response: TeamsResponse = client
-        .query(queries::TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .query(TEAMS_QUERY, serde_json::json!({"first": 1}))
         .expect("Should be able to list teams");
 
     assert!(
@@ -56,7 +58,7 @@ fn test_search_issues() {
     });
 
     let create_response: IssueCreateResponse = client
-        .query(queries::ISSUE_CREATE_MUTATION, create_variables)
+        .query(ISSUE_CREATE_MUTATION, create_variables)
         .expect("Should be able to create issue");
 
     assert!(
@@ -90,7 +92,7 @@ fn test_search_issues() {
         });
 
         let search_response: IssueSearchResponse = client
-            .query(queries::ISSUE_SEARCH_QUERY, search_variables)
+            .query(ISSUE_SEARCH_QUERY, search_variables)
             .expect("Should be able to search issues");
 
         println!(

@@ -2,7 +2,8 @@
 //!
 //! Commands for listing and viewing team information from Linear.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::team::{TEAMS_QUERY, TEAM_QUERY};
+use crate::api::GraphQLClient;
 use crate::models::{TeamResponse, TeamsResponse};
 use crate::output::{output, OutputFormat};
 use crate::Result;
@@ -30,7 +31,7 @@ use crate::Result;
 /// # }
 /// ```
 pub fn list_teams(client: &GraphQLClient, format: OutputFormat) -> Result<()> {
-    let response: TeamsResponse = client.query(queries::TEAMS_QUERY, serde_json::json!({}))?;
+    let response: TeamsResponse = client.query(TEAMS_QUERY, serde_json::json!({}))?;
     output(&response.teams.nodes, format);
     Ok(())
 }
@@ -62,7 +63,7 @@ pub fn get_team(client: &GraphQLClient, id: &str, format: OutputFormat) -> Resul
     let variables = serde_json::json!({
         "id": id
     });
-    let response: TeamResponse = client.query(queries::TEAM_QUERY, variables)?;
+    let response: TeamResponse = client.query(TEAM_QUERY, variables)?;
     output(&response.team, format);
     Ok(())
 }

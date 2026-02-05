@@ -4,7 +4,8 @@
 
 mod common;
 
-use lin::api::queries;
+use lin::api::queries::team::TEAMS_QUERY;
+use lin::api::queries::workflow::WORKFLOW_STATES_QUERY;
 use lin::models::{TeamsResponse, WorkflowStatesResponse};
 
 /// Test that we can list workflow states for a team.
@@ -20,7 +21,7 @@ fn test_workflow_states_list() {
 
     // First, get a team to use for the workflow states query
     let teams_response: TeamsResponse = client
-        .query(queries::TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .query(TEAMS_QUERY, serde_json::json!({"first": 1}))
         .expect("Should be able to list teams");
 
     assert!(
@@ -40,7 +41,7 @@ fn test_workflow_states_list() {
     });
 
     let response: WorkflowStatesResponse = client
-        .query(queries::WORKFLOW_STATES_QUERY, variables)
+        .query(WORKFLOW_STATES_QUERY, variables)
         .expect("Should be able to list workflow states");
 
     // Verify we got workflow states (every team should have at least the default states)
@@ -97,8 +98,7 @@ fn test_workflow_states_nonexistent_team() {
         "id": "nonexistent-team-id-12345"
     });
 
-    let result: Result<WorkflowStatesResponse, _> =
-        client.query(queries::WORKFLOW_STATES_QUERY, variables);
+    let result: Result<WorkflowStatesResponse, _> = client.query(WORKFLOW_STATES_QUERY, variables);
 
     assert!(
         result.is_err(),

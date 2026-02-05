@@ -2,7 +2,8 @@
 //!
 //! Commands for listing and viewing label information from Linear.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::label::{LABELS_QUERY, LABEL_QUERY, TEAM_LABELS_QUERY};
+use crate::api::GraphQLClient;
 use crate::models::{LabelResponse, LabelsResponse, TeamLabelsResponse};
 use crate::output::{output, OutputFormat};
 use crate::Result;
@@ -48,12 +49,11 @@ pub fn list_labels(
         let variables = serde_json::json!({
             "teamId": team_id
         });
-        let response: TeamLabelsResponse = client.query(queries::TEAM_LABELS_QUERY, variables)?;
+        let response: TeamLabelsResponse = client.query(TEAM_LABELS_QUERY, variables)?;
         output(&response.team.labels.nodes, format);
     } else {
         // Query workspace labels
-        let response: LabelsResponse =
-            client.query(queries::LABELS_QUERY, serde_json::json!({}))?;
+        let response: LabelsResponse = client.query(LABELS_QUERY, serde_json::json!({}))?;
         output(&response.issue_labels.nodes, format);
     }
     Ok(())
@@ -86,7 +86,7 @@ pub fn get_label(client: &GraphQLClient, id: &str, format: OutputFormat) -> Resu
     let variables = serde_json::json!({
         "id": id
     });
-    let response: LabelResponse = client.query(queries::LABEL_QUERY, variables)?;
+    let response: LabelResponse = client.query(LABEL_QUERY, variables)?;
     output(&response.issue_label, format);
     Ok(())
 }

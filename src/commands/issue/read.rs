@@ -1,6 +1,10 @@
 //! Read operations for issues (list, get, view).
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::issue::{
+    ISSUES_QUERY, ISSUE_BY_IDENTIFIER_QUERY, ISSUE_BY_IDENTIFIER_WITH_COMMENTS_QUERY, ISSUE_QUERY,
+    ISSUE_WITH_COMMENTS_QUERY,
+};
+use crate::api::GraphQLClient;
 use crate::error::LinError;
 use crate::models::{
     IssueResponse, IssueWithCommentsResponse, IssuesResponse, IssuesWithCommentsResponse,
@@ -167,7 +171,7 @@ pub fn list_issues(
     }
 
     let response: IssuesResponse =
-        client.query(queries::ISSUES_QUERY, serde_json::Value::Object(variables))?;
+        client.query(ISSUES_QUERY, serde_json::Value::Object(variables))?;
 
     // If we have a sort order that differs from the default, we need to reverse the results
     // because Linear's API doesn't support explicit sort direction via GraphQL
@@ -265,7 +269,7 @@ fn get_issue_without_comments(
         let variables = serde_json::json!({
             "id": id_or_identifier
         });
-        let response: IssueResponse = client.query(queries::ISSUE_QUERY, variables)?;
+        let response: IssueResponse = client.query(ISSUE_QUERY, variables)?;
         output(&response.issue, format);
     } else {
         // Parse as identifier and query
@@ -279,8 +283,7 @@ fn get_issue_without_comments(
             }
         });
 
-        let response: IssuesResponse =
-            client.query(queries::ISSUE_BY_IDENTIFIER_QUERY, variables)?;
+        let response: IssuesResponse = client.query(ISSUE_BY_IDENTIFIER_QUERY, variables)?;
 
         if response.issues.nodes.is_empty() {
             return Err(LinError::api(format!(
@@ -306,7 +309,7 @@ fn get_issue_with_comments_impl(
             "id": id_or_identifier
         });
         let response: IssueWithCommentsResponse =
-            client.query(queries::ISSUE_WITH_COMMENTS_QUERY, variables)?;
+            client.query(ISSUE_WITH_COMMENTS_QUERY, variables)?;
         output(&response.issue, format);
     } else {
         // Parse as identifier and query with comments
@@ -321,7 +324,7 @@ fn get_issue_with_comments_impl(
         });
 
         let response: IssuesWithCommentsResponse =
-            client.query(queries::ISSUE_BY_IDENTIFIER_WITH_COMMENTS_QUERY, variables)?;
+            client.query(ISSUE_BY_IDENTIFIER_WITH_COMMENTS_QUERY, variables)?;
 
         if response.issues.nodes.is_empty() {
             return Err(LinError::api(format!(

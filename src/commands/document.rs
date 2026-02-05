@@ -2,7 +2,8 @@
 //!
 //! Commands for listing, viewing, and creating documents in Linear.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::document::{DOCUMENTS_QUERY, DOCUMENT_CREATE_MUTATION, DOCUMENT_QUERY};
+use crate::api::GraphQLClient;
 use crate::models::{DocumentCreateResponse, DocumentResponse, DocumentsResponse};
 use crate::output::{output, OutputFormat};
 use crate::Result;
@@ -67,10 +68,8 @@ pub fn list_documents(
         variables.insert("filter".to_string(), filter);
     }
 
-    let response: DocumentsResponse = client.query(
-        queries::DOCUMENTS_QUERY,
-        serde_json::Value::Object(variables),
-    )?;
+    let response: DocumentsResponse =
+        client.query(DOCUMENTS_QUERY, serde_json::Value::Object(variables))?;
     output(&response.documents.nodes, format);
     Ok(())
 }
@@ -102,7 +101,7 @@ pub fn get_document(client: &GraphQLClient, id: &str, format: OutputFormat) -> R
     let variables = serde_json::json!({
         "id": id
     });
-    let response: DocumentResponse = client.query(queries::DOCUMENT_QUERY, variables)?;
+    let response: DocumentResponse = client.query(DOCUMENT_QUERY, variables)?;
     output(&response.document, format);
     Ok(())
 }
@@ -153,8 +152,7 @@ pub fn create_document(
         "input": serde_json::Value::Object(input)
     });
 
-    let response: DocumentCreateResponse =
-        client.query(queries::DOCUMENT_CREATE_MUTATION, variables)?;
+    let response: DocumentCreateResponse = client.query(DOCUMENT_CREATE_MUTATION, variables)?;
 
     if let Some(document) = response.document_create.document {
         output(&document, format);

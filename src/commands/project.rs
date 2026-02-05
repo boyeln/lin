@@ -2,7 +2,8 @@
 //!
 //! Commands for listing and viewing project information from Linear.
 
-use crate::api::{queries, GraphQLClient};
+use crate::api::queries::project::{PROJECTS_QUERY, PROJECT_QUERY};
+use crate::api::GraphQLClient;
 use crate::models::{ProjectResponse, ProjectsResponse};
 use crate::output::{output, OutputFormat};
 use crate::Result;
@@ -58,10 +59,8 @@ pub fn list_projects(
         variables.insert("filter".to_string(), filter);
     }
 
-    let response: ProjectsResponse = client.query(
-        queries::PROJECTS_QUERY,
-        serde_json::Value::Object(variables),
-    )?;
+    let response: ProjectsResponse =
+        client.query(PROJECTS_QUERY, serde_json::Value::Object(variables))?;
     output(&response.projects.nodes, format);
     Ok(())
 }
@@ -93,7 +92,7 @@ pub fn get_project(client: &GraphQLClient, id: &str, format: OutputFormat) -> Re
     let variables = serde_json::json!({
         "id": id
     });
-    let response: ProjectResponse = client.query(queries::PROJECT_QUERY, variables)?;
+    let response: ProjectResponse = client.query(PROJECT_QUERY, variables)?;
     output(&response.project, format);
     Ok(())
 }
