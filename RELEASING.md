@@ -9,15 +9,22 @@ Releases are distributed via GitHub Releases. When you create a release:
 2. Binaries are automatically attached to the release
 3. Users can install/update via `curl | bash` or `lin update`
 
+## Workflow
+
+**All features and fixes must go through pull requests.** GitHub auto-generates release notes from merged PRs.
+
+Version bumps are committed directly to main (they don't need to appear in release notes).
+
 ## Creating a Release
 
-### 1. Update version and changelog
+### 1. Update version on main
 
 ```bash
+git checkout main
+git pull
 # Update version in Cargo.toml
-# Update CHANGELOG.md with new changes
-
-git add Cargo.toml CHANGELOG.md
+cargo check  # Update Cargo.lock
+git add Cargo.toml Cargo.lock
 git commit -m "chore: release v0.2.0"
 git push
 ```
@@ -35,7 +42,7 @@ git push origin v0.2.0
 gh release create v0.2.0 --generate-notes
 ```
 
-Or create the release manually in the GitHub UI.
+This will automatically include all PRs merged since the last release.
 
 ### 4. Wait for builds
 

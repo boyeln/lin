@@ -46,16 +46,11 @@ cargo clippy && cargo fmt --check # Lint before commit
 ## Git
 
 - Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `test:`, `refactor:`
+- **All changes must go through pull requests** - no direct commits to main (except for releases)
+- PR titles should follow conventional commit format
 - **Before every commit**, always run:
   ```bash
   cargo test && cargo fmt --check && cargo clippy
   ```
 - Do not commit if any of these checks fail
 - Do not mention Claude or AI assistance in commit messages
-
-## Changelog
-
-- Update `CHANGELOG.md` when adding features or fixing bugs
-- Add entries under `## [Unreleased]` section
-- Use format: `- Description of change`
-- Group by: Added, Changed, Fixed, Removed
