@@ -101,6 +101,20 @@ mutation DocumentCreate($input: DocumentCreateInput!) {
 }
 "#;
 
+/// Mutation to delete a document.
+///
+/// Variables:
+/// - `id` (String!): The document's unique identifier
+///
+/// Returns: `DocumentDeleteResponse`
+pub const DOCUMENT_DELETE_MUTATION: &str = r#"
+mutation DocumentDelete($id: String!) {
+    documentDelete(id: $id) {
+        success
+    }
+}
+"#;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,5 +148,13 @@ mod tests {
         assert!(DOCUMENT_CREATE_MUTATION.contains("success"));
         assert!(DOCUMENT_CREATE_MUTATION.contains("document"));
         assert!(DOCUMENT_CREATE_MUTATION.contains("content"));
+    }
+
+    #[test]
+    fn test_document_delete_mutation_is_valid() {
+        assert!(DOCUMENT_DELETE_MUTATION.contains("mutation DocumentDelete"));
+        assert!(DOCUMENT_DELETE_MUTATION.contains("$id: String!"));
+        assert!(DOCUMENT_DELETE_MUTATION.contains("documentDelete"));
+        assert!(DOCUMENT_DELETE_MUTATION.contains("success"));
     }
 }

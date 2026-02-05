@@ -105,6 +105,22 @@ pub struct DocumentCreateResponse {
     pub document_create: DocumentCreatePayload,
 }
 
+/// Response for document deletion mutation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DocumentDeletePayload {
+    /// Whether the mutation was successful.
+    pub success: bool,
+}
+
+/// Response wrapper for document deletion.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DocumentDeleteResponse {
+    /// The mutation payload.
+    pub document_delete: DocumentDeletePayload,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
