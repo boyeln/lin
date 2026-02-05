@@ -56,7 +56,8 @@ fn test_issue_lifecycle() {
             "title": issue_title,
             "teamId": team_id,
             "description": "This is an automated test issue created by lin integration tests. It should be automatically deleted.",
-            "priority": 4  // Low priority
+            "priority": 4,  // Low priority
+            "estimate": 3.0  // Test estimate
         }
     });
 
@@ -100,6 +101,11 @@ fn test_issue_lifecycle() {
             read_response.issue.title, issue_title,
             "Read issue title should match"
         );
+        assert_eq!(
+            read_response.issue.estimate,
+            Some(3.0),
+            "Read issue estimate should match"
+        );
 
         // --- Step 3: Read Issue by Identifier ---
         println!("Reading issue by identifier: {}", issue_identifier);
@@ -138,7 +144,8 @@ fn test_issue_lifecycle() {
             "id": &issue_id,
             "input": {
                 "title": &updated_title,
-                "priority": 3  // Change to normal priority
+                "priority": 3,  // Change to normal priority
+                "estimate": 5.0  // Update estimate
             }
         });
 
@@ -161,6 +168,11 @@ fn test_issue_lifecycle() {
             "Updated title should match"
         );
         assert_eq!(updated_issue.priority, 3, "Updated priority should match");
+        assert_eq!(
+            updated_issue.estimate,
+            Some(5.0),
+            "Updated estimate should match"
+        );
 
         println!("Issue updated successfully");
     }));
