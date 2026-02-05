@@ -3,6 +3,7 @@
 use crate::Result;
 use crate::api::GraphQLClient;
 use crate::api::queries::issue::{ISSUE_BY_IDENTIFIER_QUERY, ISSUE_UPDATE_MUTATION};
+use crate::config::Config;
 use crate::error::LinError;
 use crate::models::{IssueUpdateResponse, IssuesResponse};
 use crate::output::{OutputFormat, output};
@@ -105,7 +106,12 @@ pub fn update_issue(
         input.insert("labelIds".to_string(), serde_json::json!(label_ids));
     }
 
-    if let Some(project_id) = options.project_id {
+    // Resolve project slug to UUID if specified (if config available)
+    if let Some(project_slug_or_id) = options.project_id {
+        let project_id = Config::load()
+            .ok()
+            .and_then(|config| config.get_project_id(&project_slug_or_id))
+            .unwrap_or(project_slug_or_id);
         input.insert("projectId".to_string(), serde_json::json!(project_id));
     }
 

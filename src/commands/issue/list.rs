@@ -3,6 +3,7 @@
 use crate::Result;
 use crate::api::GraphQLClient;
 use crate::api::queries::issue::ISSUES_QUERY;
+use crate::config::Config;
 use crate::error::LinError;
 use crate::models::IssuesResponse;
 use crate::output::{OutputFormat, output};
@@ -85,8 +86,12 @@ pub fn list_issues(
         );
     }
 
-    // Add project filter if specified
-    if let Some(project_id) = &options.project {
+    // Add project filter if specified (resolve slug to UUID if config available)
+    if let Some(project_slug_or_id) = &options.project {
+        let project_id = Config::load()
+            .ok()
+            .and_then(|config| config.get_project_id(project_slug_or_id))
+            .unwrap_or_else(|| project_slug_or_id.clone());
         filter.insert(
             "project".to_string(),
             serde_json::json!({ "id": { "eq": project_id } }),
