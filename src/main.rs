@@ -446,9 +446,9 @@ enum ProjectCommands {
     /// List all projects
     #[command(after_help = "EXAMPLES:\n  \
     lin project list\n  \
-    lin project list --team <team-id>")]
+    lin project list --team ENG")]
     List {
-        /// Filter by team ID (optional)
+        /// Filter by team key (optional), e.g. ENG
         #[arg(long)]
         team: Option<String>,
     },
@@ -960,7 +960,7 @@ fn handle_project_command(
 
     match command {
         ProjectCommands::List { team } => {
-            let options = project::ProjectListOptions { team_id: team };
+            let options = project::ProjectListOptions { team_key: team };
             project::list_projects(&client, options, format)
         }
         ProjectCommands::Get { id } => project::get_project(&client, &id, format),

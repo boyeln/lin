@@ -11,8 +11,8 @@ use crate::output::{OutputFormat, output};
 /// Options for listing projects.
 #[derive(Debug, Clone, Default)]
 pub struct ProjectListOptions {
-    /// Filter by team ID (optional).
-    pub team_id: Option<String>,
+    /// Filter by team key (optional), e.g. "ENG".
+    pub team_key: Option<String>,
 }
 
 /// List all projects in the organization.
@@ -48,12 +48,10 @@ pub fn list_projects(
     let mut variables = serde_json::Map::new();
 
     // Build the filter object if we have a team filter
-    if let Some(team_id) = &options.team_id {
+    if let Some(team_key) = &options.team_key {
         let filter = serde_json::json!({
-            "accessibleTeams": {
-                "some": {
-                    "id": { "eq": team_id }
-                }
+            "team": {
+                "key": { "eq": team_key }
             }
         });
         variables.insert("filter".to_string(), filter);
@@ -200,7 +198,7 @@ mod tests {
 
         // Make request with team filter
         let options = ProjectListOptions {
-            team_id: Some("team-123".to_string()),
+            team_key: Some("ENG".to_string()),
         };
         let result = list_projects(&client, options, OutputFormat::Human);
 
