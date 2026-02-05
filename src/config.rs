@@ -1,11 +1,13 @@
 //! Configuration management for the lin CLI.
 //!
 //! Handles loading, saving, and managing organization configurations
-//! including API tokens stored in `~/.config/lin/config.json`.
+//! including API tokens stored in `~/.config/lin/config.json` (global)
+//! or `.lin/config.json` (local/project-specific).
 
 use std::collections::HashMap;
+use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
@@ -23,48 +25,127 @@ pub struct Config {
     pub default_org: Option<String>,
 }
 
+/// Scope for config operations (local or global).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ConfigScope {
+    /// Local config (.lin/config.json in project)
+    Local,
+    /// Global config (~/.config/lin/config.json)
+    Global,
+}
+
 impl Config {
-    /// Returns the path to the configuration file.
+    /// Returns the path to the global configuration file.
     ///
     /// The config file is stored at `~/.config/lin/config.json` on Unix systems
     /// or the equivalent XDG config directory on other platforms.
     pub fn config_path() -> PathBuf {
+        Self::global_config_path()
+    }
+
+    /// Returns the path to the global configuration file.
+    pub fn global_config_path() -> PathBuf {
         let config_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
         config_dir.join("lin").join("config.json")
     }
 
-    /// Load configuration from the config file.
+    /// Find the local configuration file by walking up the directory tree.
     ///
-    /// If the config file doesn't exist, returns a default empty configuration.
-    /// Creates the config directory if it doesn't exist.
+    /// Looks for `.lin/config.json` starting from the current directory
+    /// and walking up to the root.
     ///
-    /// # Errors
-    ///
-    /// Returns an error if the config file exists but cannot be read or parsed.
-    pub fn load() -> Result<Self> {
-        let path = Self::config_path();
+    /// Returns None if no local config file is found.
+    pub fn find_local_config_path() -> Option<PathBuf> {
+        let mut current_dir = env::current_dir().ok()?;
 
+        loop {
+            let candidate = current_dir.join(".lin").join("config.json");
+            if candidate.exists() {
+                return Some(candidate);
+            }
+
+            // Try to move to parent directory
+            if !current_dir.pop() {
+                // Reached root, no config found
+                return None;
+            }
+        }
+    }
+
+    /// Load configuration from a specific path.
+    fn load_from_path(path: &Path) -> Result<Self> {
         if !path.exists() {
             return Ok(Config::default());
         }
 
-        let contents = fs::read_to_string(&path)?;
+        let contents = fs::read_to_string(path)?;
         let config: Config = serde_json::from_str(&contents)
             .map_err(|e| LinError::parse(format!("Failed to parse config file: {}", e)))?;
 
         Ok(config)
     }
 
-    /// Save the configuration to the config file.
+    /// Load the global configuration.
+    pub fn load_global() -> Result<Self> {
+        Self::load_from_path(&Self::global_config_path())
+    }
+
+    /// Load the local configuration if it exists.
+    pub fn load_local() -> Result<Option<Self>> {
+        if let Some(path) = Self::find_local_config_path() {
+            Ok(Some(Self::load_from_path(&path)?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Merge two configs, with the local config taking precedence.
     ///
-    /// Creates the config directory and any parent directories if they don't exist.
+    /// Organizations from both configs are combined, with local tokens
+    /// overriding global tokens for the same organization name.
+    /// The default_org from local config (if set) overrides the global one.
+    pub fn merge(global: Self, local: Self) -> Self {
+        let mut merged = Config {
+            organizations: global.organizations.clone(),
+            default_org: global.default_org.clone(),
+        };
+
+        // Merge organizations (local overrides global)
+        for (name, token) in local.organizations {
+            merged.organizations.insert(name, token);
+        }
+
+        // Local default_org overrides global
+        if local.default_org.is_some() {
+            merged.default_org = local.default_org;
+        }
+
+        merged
+    }
+
+    /// Load configuration from both local and global config files.
+    ///
+    /// Local config (.lin/config.json) takes precedence over global config
+    /// (~/.config/lin/config.json). Organizations and settings are merged,
+    /// with local values overriding global ones.
+    ///
+    /// If neither config file exists, returns a default empty configuration.
     ///
     /// # Errors
     ///
-    /// Returns an error if the config file cannot be written.
-    pub fn save(&self) -> Result<()> {
-        let path = Self::config_path();
+    /// Returns an error if a config file exists but cannot be read or parsed.
+    pub fn load() -> Result<Self> {
+        let global = Self::load_global()?;
+        let local = Self::load_local()?;
 
+        match local {
+            Some(local_config) => Ok(Self::merge(global, local_config)),
+            None => Ok(global),
+        }
+    }
+
+    /// Save the configuration to a specific path.
+    fn save_to_path(&self, path: &Path) -> Result<()> {
         // Create parent directories if they don't exist
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
@@ -73,8 +154,48 @@ impl Config {
         let contents = serde_json::to_string_pretty(self)
             .map_err(|e| LinError::parse(format!("Failed to serialize config: {}", e)))?;
 
-        fs::write(&path, contents)?;
+        fs::write(path, contents)?;
         Ok(())
+    }
+
+    /// Save the configuration to the global config file.
+    ///
+    /// Creates the config directory and any parent directories if they don't exist.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the config file cannot be written.
+    pub fn save(&self) -> Result<()> {
+        self.save_global()
+    }
+
+    /// Save to the global config file.
+    pub fn save_global(&self) -> Result<()> {
+        self.save_to_path(&Self::global_config_path())
+    }
+
+    /// Save to the local config file (.lin/config.json in current directory).
+    pub fn save_local(&self) -> Result<()> {
+        let local_path = PathBuf::from(".lin").join("config.json");
+        self.save_to_path(&local_path)
+    }
+
+    /// Save to the appropriate config file based on scope.
+    ///
+    /// If scope is None, saves to local config if it exists, otherwise global.
+    pub fn save_with_scope(&self, scope: Option<ConfigScope>) -> Result<()> {
+        match scope {
+            Some(ConfigScope::Global) => self.save_global(),
+            Some(ConfigScope::Local) => self.save_local(),
+            None => {
+                // Auto-detect: save to local if it exists, otherwise global
+                if Self::find_local_config_path().is_some() {
+                    self.save_local()
+                } else {
+                    self.save_global()
+                }
+            }
+        }
     }
 
     /// Add or update an organization with the given token.
@@ -130,14 +251,14 @@ impl Config {
             None => self.default_org.as_deref().ok_or_else(|| {
                 LinError::config(
                     "No organization specified and no default organization is set. \
-                     Use 'lin org add <name>' to add an organization or 'lin org set-default <name>' to set a default."
+                     Use 'lin config set token <value>' to add an organization or 'lin config set default-org <name>' to set a default."
                 )
             })?,
         };
 
         self.organizations.get(org_name).cloned().ok_or_else(|| {
             LinError::config(format!(
-                "Organization '{}' not found in configuration. Use 'lin org add {}' to add it.",
+                "Organization '{}' not found in configuration. Use 'lin config set token <value> --org {}' to add it.",
                 org_name, org_name
             ))
         })
@@ -156,7 +277,7 @@ impl Config {
     pub fn set_default(&mut self, name: &str) -> Result<()> {
         if !self.organizations.contains_key(name) {
             return Err(LinError::config(format!(
-                "Organization '{}' not found in configuration. Add it first with 'lin org add {}'.",
+                "Organization '{}' not found in configuration. Add it first with 'lin config set token <value> --org {}'.",
                 name, name
             )));
         }
