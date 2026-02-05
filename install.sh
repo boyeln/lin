@@ -172,7 +172,7 @@ main() {
     # Create temp directory for download
     local tmp_dir
     tmp_dir="$(mktemp -d)"
-    trap 'rm -rf "$tmp_dir"' EXIT
+    trap '[ -n "${tmp_dir:-}" ] && rm -rf "$tmp_dir"' EXIT
 
     # Download
     local download_url
