@@ -37,6 +37,7 @@ use super::IssueCreateOptions;
 ///     state_id: None,
 ///     priority: Some(2), // High priority
 ///     label_ids: None,
+///     project_id: None,
 /// };
 /// create_issue(&client, options, OutputFormat::Human)?;
 /// # Ok(())
@@ -70,6 +71,10 @@ pub fn create_issue(
 
     if let Some(label_ids) = options.label_ids {
         input.insert("labelIds".to_string(), serde_json::json!(label_ids));
+    }
+
+    if let Some(project_id) = options.project_id {
+        input.insert("projectId".to_string(), serde_json::json!(project_id));
     }
 
     let variables = serde_json::json!({
@@ -145,6 +150,7 @@ mod tests {
             state_id: None,
             priority: None,
             label_ids: None,
+            project_id: None,
         };
 
         let result = create_issue(&client, options, OutputFormat::Human);
@@ -209,6 +215,7 @@ mod tests {
             state_id: Some("state-1".to_string()),
             priority: Some(2),
             label_ids: None,
+            project_id: None,
         };
 
         let result = create_issue(&client, options, OutputFormat::Human);
@@ -245,6 +252,7 @@ mod tests {
             state_id: None,
             priority: None,
             label_ids: None,
+            project_id: None,
         };
 
         let result = create_issue(&client, options, OutputFormat::Human);
@@ -283,6 +291,7 @@ mod tests {
             state_id: None,
             priority: None,
             label_ids: None,
+            project_id: None,
         };
 
         let result = create_issue(&client, options, OutputFormat::Human);

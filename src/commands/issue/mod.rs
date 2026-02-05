@@ -175,6 +175,8 @@ pub struct IssueCreateOptions {
     pub priority: Option<i32>,
     /// Label IDs to add to the issue.
     pub label_ids: Option<Vec<String>>,
+    /// Project ID to assign the issue to.
+    pub project_id: Option<String>,
 }
 
 /// Options for updating an existing issue.
@@ -192,6 +194,8 @@ pub struct IssueUpdateOptions {
     pub priority: Option<i32>,
     /// Label IDs to set on the issue (replaces existing labels).
     pub label_ids: Option<Vec<String>>,
+    /// Project ID to assign the issue to.
+    pub project_id: Option<String>,
 }
 
 /// Check if a string looks like a UUID.
