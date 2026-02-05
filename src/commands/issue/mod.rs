@@ -2,16 +2,10 @@
 //!
 //! Commands for listing and viewing issue information from Linear.
 
-mod create;
-mod delete;
-mod read;
-mod update;
-
-// Re-export all public items from submodules
-pub use create::create_issue;
-pub use delete::{archive_issue, delete_issue, unarchive_issue};
-pub use read::{get_issue, get_issue_with_comments, list_issues};
-pub use update::update_issue;
+pub mod create;
+pub mod delete;
+pub mod read;
+pub mod update;
 
 use crate::api::queries::issue::ISSUE_BY_IDENTIFIER_QUERY;
 use crate::api::GraphQLClient;

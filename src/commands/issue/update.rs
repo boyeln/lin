@@ -26,7 +26,8 @@ use super::{is_uuid, parse_identifier, IssueUpdateOptions};
 /// ```no_run
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use lin::api::GraphQLClient;
-/// use lin::commands::issue::{update_issue, IssueUpdateOptions};
+/// use lin::commands::issue::update::update_issue;
+/// use lin::commands::issue::IssueUpdateOptions;
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
