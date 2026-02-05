@@ -92,6 +92,7 @@ pub fn require_api_token(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     fn make_test_config() -> Config {
         let mut config = Config::default();
@@ -112,6 +113,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_config_token_fallback() {
         let config = make_test_config();
 
@@ -123,6 +125,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_specific_org_token() {
         let mut config = Config::default();
         config
@@ -141,6 +144,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_no_token_error() {
         let config = Config::default();
         unsafe { env::remove_var(LINEAR_API_TOKEN_ENV) };
@@ -150,6 +154,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_has_api_token() {
         let config = make_test_config();
         unsafe { env::remove_var(LINEAR_API_TOKEN_ENV) };
@@ -162,6 +167,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_require_api_token_error_message() {
         let config = Config::default();
         unsafe { env::remove_var(LINEAR_API_TOKEN_ENV) };
@@ -175,6 +181,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_env_token_priority_over_config() {
         let config = make_test_config();
 
@@ -189,6 +196,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn test_empty_env_var_falls_through() {
         let config = make_test_config();
 
