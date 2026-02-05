@@ -43,6 +43,9 @@ atty = "0.2"
 # Temporary directories (for self-update)
 tempfile = "3"
 
+# Date/time handling
+chrono = { version = "0.4", features = ["serde"] }
+
 [dev-dependencies]
 # HTTP mocking for tests
 mockito = "1"
