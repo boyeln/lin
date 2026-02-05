@@ -7,9 +7,9 @@ use std::io::{self, BufRead, Write};
 use colored::Colorize;
 use serde::Serialize;
 
-use crate::config::{Config, ConfigScope, ConfigValidationIssue, ValidationSeverity};
-use crate::output::{output_success, HumanDisplay, OutputFormat};
 use crate::Result;
+use crate::config::{Config, ConfigScope, ConfigValidationIssue, ValidationSeverity};
+use crate::output::{HumanDisplay, OutputFormat, output_success};
 
 /// Response for the config set command.
 #[derive(Serialize)]

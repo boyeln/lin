@@ -2,11 +2,11 @@
 //!
 //! Commands for listing workflow states from Linear teams.
 
-use crate::api::queries::workflow::WORKFLOW_STATES_QUERY;
-use crate::api::GraphQLClient;
-use crate::models::WorkflowStatesResponse;
-use crate::output::{output, OutputFormat};
 use crate::Result;
+use crate::api::GraphQLClient;
+use crate::api::queries::workflow::WORKFLOW_STATES_QUERY;
+use crate::models::WorkflowStatesResponse;
+use crate::output::{OutputFormat, output};
 
 /// List all workflow states for a team.
 ///

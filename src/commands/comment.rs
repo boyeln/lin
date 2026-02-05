@@ -2,13 +2,13 @@
 //!
 //! Commands for listing and creating comments on Linear issues.
 
+use crate::Result;
+use crate::api::GraphQLClient;
 use crate::api::queries::comment::COMMENT_CREATE_MUTATION;
 use crate::api::queries::issue::{ISSUE_BY_IDENTIFIER_QUERY, ISSUE_COMMENTS_QUERY};
-use crate::api::GraphQLClient;
 use crate::error::LinError;
 use crate::models::{CommentCreateResponse, IssueCommentsResponse, IssuesResponse};
-use crate::output::{output, OutputFormat};
-use crate::Result;
+use crate::output::{OutputFormat, output};
 
 use super::issue::{is_uuid, parse_identifier};
 

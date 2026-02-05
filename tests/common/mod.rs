@@ -3,8 +3,8 @@
 //! This module provides shared helpers for integration tests that run
 //! against the real Linear API.
 
-use lin::api::queries::issue::ISSUE_DELETE_MUTATION;
 use lin::api::GraphQLClient;
+use lin::api::queries::issue::ISSUE_DELETE_MUTATION;
 use lin::models::IssueDeleteResponse;
 
 /// Test prefix for issues created during tests.

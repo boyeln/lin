@@ -4,7 +4,7 @@
 
 mod common;
 
-use lin::api::queries::document::{DOCUMENTS_QUERY, DOCUMENT_QUERY};
+use lin::api::queries::document::{DOCUMENT_QUERY, DOCUMENTS_QUERY};
 use lin::models::DocumentsResponse;
 
 /// Test that we can list documents in the organization.

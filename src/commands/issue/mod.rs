@@ -8,12 +8,12 @@ pub mod get;
 pub mod list;
 pub mod update;
 
-use crate::api::queries::issue::ISSUE_BY_IDENTIFIER_QUERY;
+use crate::Result;
 use crate::api::GraphQLClient;
+use crate::api::queries::issue::ISSUE_BY_IDENTIFIER_QUERY;
 use crate::error::LinError;
 use crate::models::IssuesResponse;
 use crate::output::HumanDisplay;
-use crate::Result;
 use serde::Serialize;
 
 /// Sort field for issue list.

@@ -1,15 +1,15 @@
 //! Delete and archive operations for issues.
 
+use crate::Result;
+use crate::api::GraphQLClient;
 use crate::api::queries::issue::{
     ISSUE_ARCHIVE_MUTATION, ISSUE_DELETE_MUTATION, ISSUE_UNARCHIVE_MUTATION,
 };
-use crate::api::GraphQLClient;
 use crate::error::LinError;
 use crate::models::{IssueArchiveResponse, IssueDeleteResponse, IssueUnarchiveResponse};
-use crate::output::{output, OutputFormat};
-use crate::Result;
+use crate::output::{OutputFormat, output};
 
-use super::{resolve_issue_id, MessageResponse};
+use super::{MessageResponse, resolve_issue_id};
 
 /// Delete an issue in Linear.
 ///

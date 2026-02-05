@@ -2,12 +2,12 @@
 //!
 //! Commands for getting user information from Linear.
 
+use crate::Result;
+use crate::api::GraphQLClient;
 use crate::api::queries::organization::VIEWER_QUERY;
 use crate::api::queries::user::USERS_QUERY;
-use crate::api::GraphQLClient;
 use crate::models::{UsersResponse, ViewerResponse};
-use crate::output::{output, OutputFormat};
-use crate::Result;
+use crate::output::{OutputFormat, output};
 
 /// Get the current authenticated user's information.
 ///

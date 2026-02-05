@@ -1,13 +1,13 @@
 //! Update operations for issues.
 
-use crate::api::queries::issue::{ISSUE_BY_IDENTIFIER_QUERY, ISSUE_UPDATE_MUTATION};
+use crate::Result;
 use crate::api::GraphQLClient;
+use crate::api::queries::issue::{ISSUE_BY_IDENTIFIER_QUERY, ISSUE_UPDATE_MUTATION};
 use crate::error::LinError;
 use crate::models::{IssueUpdateResponse, IssuesResponse};
-use crate::output::{output, OutputFormat};
-use crate::Result;
+use crate::output::{OutputFormat, output};
 
-use super::{is_uuid, parse_identifier, IssueUpdateOptions};
+use super::{IssueUpdateOptions, is_uuid, parse_identifier};
 
 /// Update an existing issue in Linear.
 ///

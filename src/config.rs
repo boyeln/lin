@@ -11,8 +11,8 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::LinError;
 use crate::Result;
+use crate::error::LinError;
 
 /// Configuration for the lin CLI.
 ///
@@ -565,10 +565,12 @@ mod tests {
         let config = Config::default();
         let result = config.get_token(None);
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("No organization specified"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("No organization specified")
+        );
     }
 
     #[test]
@@ -637,9 +639,11 @@ mod tests {
         assert!(result.is_valid); // Warning doesn't make it invalid
         assert_eq!(result.issues.len(), 1);
         assert_eq!(result.issues[0].severity, ValidationSeverity::Warning);
-        assert!(result.issues[0]
-            .message
-            .contains("does not start with 'lin_api_'"));
+        assert!(
+            result.issues[0]
+                .message
+                .contains("does not start with 'lin_api_'")
+        );
     }
 
     #[test]
@@ -653,10 +657,12 @@ mod tests {
         let result = config.validate();
         assert!(!result.is_valid);
         // Should have both empty token error and invalid format warning
-        assert!(result
-            .issues
-            .iter()
-            .any(|i| i.severity == ValidationSeverity::Error));
+        assert!(
+            result
+                .issues
+                .iter()
+                .any(|i| i.severity == ValidationSeverity::Error)
+        );
         assert!(result.issues.iter().any(|i| i.message.contains("is empty")));
     }
 
@@ -670,9 +676,11 @@ mod tests {
         assert!(!result.is_valid);
         assert_eq!(result.issues.len(), 1);
         assert_eq!(result.issues[0].severity, ValidationSeverity::Error);
-        assert!(result.issues[0]
-            .message
-            .contains("does not exist in the organizations list"));
+        assert!(
+            result.issues[0]
+                .message
+                .contains("does not exist in the organizations list")
+        );
     }
 
     #[test]
@@ -699,10 +707,12 @@ mod tests {
         assert!(!result.is_valid);
         // Should have warnings for both invalid tokens and error for invalid default
         assert!(result.issues.len() >= 3);
-        assert!(result
-            .issues
-            .iter()
-            .any(|i| i.severity == ValidationSeverity::Error));
+        assert!(
+            result
+                .issues
+                .iter()
+                .any(|i| i.severity == ValidationSeverity::Error)
+        );
     }
 
     #[test]

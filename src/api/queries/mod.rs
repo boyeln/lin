@@ -34,8 +34,8 @@ pub mod workflow;
 #[cfg(test)]
 mod tests {
     use super::organization::VIEWER_QUERY;
-    use super::project::{PROJECTS_QUERY, PROJECT_QUERY};
-    use super::team::{TEAMS_QUERY, TEAM_QUERY};
+    use super::project::{PROJECT_QUERY, PROJECTS_QUERY};
+    use super::team::{TEAM_QUERY, TEAMS_QUERY};
     use super::user::USERS_QUERY;
     use super::workflow::WORKFLOW_STATES_QUERY;
 

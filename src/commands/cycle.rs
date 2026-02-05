@@ -2,11 +2,11 @@
 //!
 //! Commands for listing and viewing cycle information from Linear.
 
-use crate::api::queries::cycle::{CYCLES_QUERY, CYCLE_QUERY};
-use crate::api::GraphQLClient;
-use crate::models::{CycleResponse, CyclesResponse};
-use crate::output::{output, OutputFormat};
 use crate::Result;
+use crate::api::GraphQLClient;
+use crate::api::queries::cycle::{CYCLE_QUERY, CYCLES_QUERY};
+use crate::models::{CycleResponse, CyclesResponse};
+use crate::output::{OutputFormat, output};
 
 /// List all cycles for a team.
 ///

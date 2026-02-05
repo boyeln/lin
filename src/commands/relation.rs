@@ -3,18 +3,18 @@
 //! Commands for listing, adding, and removing relations between Linear issues.
 //! Supports parent/child, blocks/blocked by, and related relationships.
 
-use crate::api::queries::issue::{
-    ISSUE_BY_IDENTIFIER_QUERY, ISSUE_RELATIONS_QUERY, ISSUE_RELATION_CREATE_MUTATION,
-    ISSUE_RELATION_DELETE_MUTATION, ISSUE_SET_PARENT_MUTATION,
-};
+use crate::Result;
 use crate::api::GraphQLClient;
+use crate::api::queries::issue::{
+    ISSUE_BY_IDENTIFIER_QUERY, ISSUE_RELATION_CREATE_MUTATION, ISSUE_RELATION_DELETE_MUTATION,
+    ISSUE_RELATIONS_QUERY, ISSUE_SET_PARENT_MUTATION,
+};
 use crate::error::LinError;
 use crate::models::{
     IssueRelationCreateResponse, IssueRelationDeleteResponse, IssueRelationsResponse,
     IssueSetParentResponse, IssuesResponse, NormalizedRelation,
 };
-use crate::output::{output, OutputFormat};
-use crate::Result;
+use crate::output::{OutputFormat, output};
 
 use super::issue::{is_uuid, parse_identifier};
 

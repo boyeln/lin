@@ -2,11 +2,11 @@
 //!
 //! Commands for listing and viewing project information from Linear.
 
-use crate::api::queries::project::{PROJECTS_QUERY, PROJECT_QUERY};
-use crate::api::GraphQLClient;
-use crate::models::{ProjectResponse, ProjectsResponse};
-use crate::output::{output, OutputFormat};
 use crate::Result;
+use crate::api::GraphQLClient;
+use crate::api::queries::project::{PROJECT_QUERY, PROJECTS_QUERY};
+use crate::models::{ProjectResponse, ProjectsResponse};
+use crate::output::{OutputFormat, output};
 
 /// Options for listing projects.
 #[derive(Debug, Clone, Default)]

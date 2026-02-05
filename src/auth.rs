@@ -7,9 +7,9 @@
 
 use std::env;
 
+use crate::Result;
 use crate::config::Config;
 use crate::error::LinError;
-use crate::Result;
 
 /// Environment variable name for the Linear API token.
 pub const LINEAR_API_TOKEN_ENV: &str = "LINEAR_API_TOKEN";
@@ -115,7 +115,7 @@ mod tests {
         let config = make_test_config();
 
         // Clear any env var that might be set
-        env::remove_var(LINEAR_API_TOKEN_ENV);
+        unsafe { env::remove_var(LINEAR_API_TOKEN_ENV) };
 
         let token = get_api_token(None, &config, None).unwrap();
         assert_eq!(token, "config-token");
@@ -127,7 +127,7 @@ mod tests {
         config.add_org("org1", "token1");
         config.add_org("org2", "token2");
 
-        env::remove_var(LINEAR_API_TOKEN_ENV);
+        unsafe { env::remove_var(LINEAR_API_TOKEN_ENV) };
 
         let token = get_api_token(None, &config, Some("org2")).unwrap();
         assert_eq!(token, "token2");
@@ -136,7 +136,7 @@ mod tests {
     #[test]
     fn test_no_token_error() {
         let config = Config::default();
-        env::remove_var(LINEAR_API_TOKEN_ENV);
+        unsafe { env::remove_var(LINEAR_API_TOKEN_ENV) };
 
         let result = get_api_token(None, &config, None);
         assert!(result.is_err());
@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn test_has_api_token() {
         let config = make_test_config();
-        env::remove_var(LINEAR_API_TOKEN_ENV);
+        unsafe { env::remove_var(LINEAR_API_TOKEN_ENV) };
 
         assert!(has_api_token(Some("token"), &config, None));
         assert!(has_api_token(None, &config, None));
@@ -157,7 +157,7 @@ mod tests {
     #[test]
     fn test_require_api_token_error_message() {
         let config = Config::default();
-        env::remove_var(LINEAR_API_TOKEN_ENV);
+        unsafe { env::remove_var(LINEAR_API_TOKEN_ENV) };
 
         let result = require_api_token(None, &config, None);
         assert!(result.is_err());
@@ -173,13 +173,13 @@ mod tests {
         let config = make_test_config();
 
         // Set env var
-        env::set_var(LINEAR_API_TOKEN_ENV, "env-token");
+        unsafe { env::set_var(LINEAR_API_TOKEN_ENV, "env-token") };
 
         let token = get_api_token(None, &config, None).unwrap();
         assert_eq!(token, "env-token");
 
         // Clean up
-        env::remove_var(LINEAR_API_TOKEN_ENV);
+        unsafe { env::remove_var(LINEAR_API_TOKEN_ENV) };
     }
 
     #[test]
@@ -187,12 +187,12 @@ mod tests {
         let config = make_test_config();
 
         // Set empty env var
-        env::set_var(LINEAR_API_TOKEN_ENV, "");
+        unsafe { env::set_var(LINEAR_API_TOKEN_ENV, "") };
 
         let token = get_api_token(None, &config, None).unwrap();
         assert_eq!(token, "config-token");
 
         // Clean up
-        env::remove_var(LINEAR_API_TOKEN_ENV);
+        unsafe { env::remove_var(LINEAR_API_TOKEN_ENV) };
     }
 }
