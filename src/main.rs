@@ -8,7 +8,7 @@ use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
 use lin::commands::{
     attachment, cache, comment, completions, cycle, document, git, issue, label, org, project,
-    relation, search, team, user, workflow,
+    relation, search, self_update, team, user, workflow,
 };
 use lin::config::Config;
 use lin::output::{init_colors, output_error_with_format, output_success, OutputFormat};
@@ -141,6 +141,15 @@ enum Commands {
     Cache {
         #[command(subcommand)]
         command: CacheCommands,
+    },
+    /// Update lin to the latest version
+    #[command(after_help = "EXAMPLES:\n  \
+    lin update\n  \
+    lin update --check")]
+    Update {
+        /// Only check if an update is available, don't install
+        #[arg(long)]
+        check: bool,
     },
 }
 
@@ -630,6 +639,14 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
         }
         // Cache command doesn't require an API token
         Commands::Cache { command } => handle_cache_command(command, format),
+        // Update command doesn't require an API token
+        Commands::Update { check } => {
+            if *check {
+                self_update::check_update(format)
+            } else {
+                self_update::update(format)
+            }
+        }
         // All other commands require an API token
         _ => {
             let config = Config::load()?;
@@ -655,7 +672,10 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
                     state,
                     limit,
                 } => handle_search_command(&token, &query, team, assignee, state, limit, format),
-                Commands::Org { .. } | Commands::Completions { .. } | Commands::Cache { .. } => {
+                Commands::Org { .. }
+                | Commands::Completions { .. }
+                | Commands::Cache { .. }
+                | Commands::Update { .. } => {
                     unreachable!()
                 }
             }
