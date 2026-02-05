@@ -3,6 +3,7 @@
 use colored::Colorize;
 
 use super::HumanDisplay;
+use crate::config::Config;
 use crate::models::Project;
 
 impl HumanDisplay for Project {
@@ -33,7 +34,13 @@ impl HumanDisplay for Project {
             parts.push(format!("  {}: {}", "Target".dimmed(), target));
         }
 
-        parts.push(format!("  {}: {}", "ID".dimmed(), self.id));
+        // Try to show slug instead of UUID
+        let id_display = Config::load()
+            .ok()
+            .and_then(|config| config.get_project_slug(&self.id))
+            .unwrap_or_else(|| self.id.clone());
+
+        parts.push(format!("  {}: {}", "Slug".dimmed(), id_display));
 
         parts.join("\n")
     }
