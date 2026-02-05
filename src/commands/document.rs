@@ -5,6 +5,7 @@
 use crate::Result;
 use crate::api::GraphQLClient;
 use crate::api::queries::document::{DOCUMENT_CREATE_MUTATION, DOCUMENT_QUERY, DOCUMENTS_QUERY};
+use crate::config::Config;
 use crate::models::{DocumentCreateResponse, DocumentResponse, DocumentsResponse};
 use crate::output::{OutputFormat, output};
 
@@ -58,8 +59,12 @@ pub fn list_documents(
     // Build variables
     let mut variables = serde_json::Map::new();
 
-    // Build the filter object if we have a project filter
-    if let Some(project_id) = &options.project_id {
+    // Build the filter object if we have a project filter (resolve slug to UUID if config available)
+    if let Some(project_slug_or_id) = &options.project_id {
+        let project_id = Config::load()
+            .ok()
+            .and_then(|config| config.get_project_id(project_slug_or_id))
+            .unwrap_or_else(|| project_slug_or_id.clone());
         let filter = serde_json::json!({
             "project": {
                 "id": { "eq": project_id }
@@ -144,7 +149,12 @@ pub fn create_document(
     input.insert("title".to_string(), serde_json::json!(options.title));
     input.insert("content".to_string(), serde_json::json!(options.content));
 
-    if let Some(project_id) = options.project_id {
+    // Resolve project slug to UUID if specified (if config available)
+    if let Some(project_slug_or_id) = options.project_id {
+        let project_id = Config::load()
+            .ok()
+            .and_then(|config| config.get_project_id(&project_slug_or_id))
+            .unwrap_or(project_slug_or_id);
         input.insert("projectId".to_string(), serde_json::json!(project_id));
     }
 
