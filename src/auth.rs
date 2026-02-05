@@ -83,9 +83,8 @@ pub fn require_api_token(
     get_api_token(cli_token, config, org).map_err(|_| {
         LinError::config(
             "No API token found. Provide a token using one of these methods:\n\
-             1. Use --api-token flag: lin --api-token <token> <command>\n\
-             2. Set LINEAR_API_TOKEN environment variable\n\
-             3. Add a token: lin config set token <value>",
+             1. Authenticate: lin auth <name> <token>\n\
+             2. Set LINEAR_API_TOKEN environment variable",
         )
     })
 }
@@ -96,7 +95,9 @@ mod tests {
 
     fn make_test_config() -> Config {
         let mut config = Config::default();
-        config.add_org("test-org", "config-token");
+        config
+            .add_org("test-org".to_string(), "config-token".to_string())
+            .unwrap();
         config
     }
 
@@ -124,12 +125,18 @@ mod tests {
     #[test]
     fn test_specific_org_token() {
         let mut config = Config::default();
-        config.add_org("org1", "token1");
-        config.add_org("org2", "token2");
+        config
+            .add_org("org1".to_string(), "token1".to_string())
+            .unwrap();
+        config
+            .add_org("org2".to_string(), "token2".to_string())
+            .unwrap();
 
         unsafe { env::remove_var(LINEAR_API_TOKEN_ENV) };
 
-        let token = get_api_token(None, &config, Some("org2")).unwrap();
+        // Need to set org2 as active or specify it
+        config.switch_org("org2").unwrap();
+        let token = get_api_token(None, &config, None).unwrap();
         assert_eq!(token, "token2");
     }
 
@@ -163,9 +170,8 @@ mod tests {
         assert!(result.is_err());
 
         let err_msg = result.unwrap_err().to_string();
-        assert!(err_msg.contains("--api-token"));
+        assert!(err_msg.contains("lin auth"));
         assert!(err_msg.contains("LINEAR_API_TOKEN"));
-        assert!(err_msg.contains("lin config set token"));
     }
 
     #[test]
