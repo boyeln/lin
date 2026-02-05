@@ -753,12 +753,12 @@ fn handle_issue_command(
                 sort_by,
                 sort_order,
             };
-            issue::read::list_issues(&client, viewer_id.as_deref(), options, format)
+            issue::list::list_issues(&client, viewer_id.as_deref(), options, format)
         }
         IssueCommands::Get {
             identifier,
             with_comments,
-        } => issue::read::get_issue_with_comments(&client, &identifier, with_comments, format),
+        } => issue::get::get_issue_with_comments(&client, &identifier, with_comments, format),
         IssueCommands::Create {
             title,
             team,

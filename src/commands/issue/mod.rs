@@ -4,7 +4,8 @@
 
 pub mod create;
 pub mod delete;
-pub mod read;
+pub mod get;
+pub mod list;
 pub mod update;
 
 use crate::api::queries::issue::ISSUE_BY_IDENTIFIER_QUERY;
