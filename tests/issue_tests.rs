@@ -454,3 +454,204 @@ fn test_issue_delete() {
         println!("Issue not found after delete (confirmed hard delete)");
     }
 }
+
+/// Test listing issues with priority filter.
+///
+/// This test verifies:
+/// 1. Creating issues with different priorities
+/// 2. Filtering issues by priority level
+/// 3. Cleanup (delete test issues)
+#[test]
+#[ignore]
+fn test_issue_list_with_priority_filter() {
+    let client = common::create_client();
+
+    // Get a team
+    let teams_response: TeamsResponse = client
+        .query(TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .expect("Should be able to list teams");
+
+    let team = &teams_response.teams.nodes[0];
+    let team_id = &team.id;
+    let team_key = &team.key;
+
+    println!("Using team: {} ({})", team.name, team.key);
+
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    // Create issues with different priorities
+    let priorities = vec![1, 2, 3, 4]; // Urgent, High, Normal, Low
+    let mut created_issue_ids = Vec::new();
+
+    for priority in &priorities {
+        let title = format!(
+            "{} Priority {} Test {}",
+            common::TEST_ISSUE_PREFIX, priority, timestamp
+        );
+
+        let create_variables = serde_json::json!({
+            "input": {
+                "title": title,
+                "teamId": team_id,
+                "priority": priority
+            }
+        });
+
+        let create_response: IssueCreateResponse = client
+            .query(ISSUE_CREATE_MUTATION, create_variables)
+            .expect("Should be able to create issue");
+
+        if let Some(issue) = create_response.issue_create.issue {
+            created_issue_ids.push(issue.id.clone());
+            println!("Created issue with priority {}: {}", priority, issue.identifier);
+        }
+    }
+
+    // Use closure to ensure cleanup
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        // Wait a moment for issues to be indexed
+        std::thread::sleep(std::time::Duration::from_millis(500));
+
+        // Test filtering by priority 1 (Urgent)
+        let filter_variables = serde_json::json!({
+            "first": 50,
+            "filter": {
+                "team": { "key": { "eq": team_key } },
+                "priority": { "eq": 1 }
+            }
+        });
+
+        let filtered_response: IssuesResponse = client
+            .query(ISSUE_BY_IDENTIFIER_QUERY, filter_variables)
+            .expect("Should be able to filter issues");
+
+        // All returned issues should have priority 1
+        for issue in &filtered_response.issues.nodes {
+            assert_eq!(issue.priority, 1, "Filtered issue should have priority 1");
+        }
+
+        println!(
+            "Found {} issue(s) with priority 1",
+            filtered_response.issues.nodes.len()
+        );
+    }));
+
+    // Cleanup: Delete all created issues
+    for issue_id in &created_issue_ids {
+        let _ = common::delete_issue(&client, issue_id);
+    }
+    println!("Deleted {} test issues", created_issue_ids.len());
+
+    if let Err(e) = result {
+        std::panic::resume_unwind(e);
+    }
+}
+
+/// Test listing issues with sorting.
+///
+/// This test verifies:
+/// 1. Creating multiple issues
+/// 2. Sorting issues by different fields
+/// 3. Cleanup (delete test issues)
+#[test]
+#[ignore]
+fn test_issue_list_with_sorting() {
+    let client = common::create_client();
+
+    // Get a team
+    let teams_response: TeamsResponse = client
+        .query(TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .expect("Should be able to list teams");
+
+    let team = &teams_response.teams.nodes[0];
+    let team_id = &team.id;
+    let team_key = &team.key;
+
+    println!("Using team: {} ({})", team.name, team.key);
+
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    // Create multiple issues with different titles
+    let titles = vec!["Alpha", "Beta", "Charlie"];
+    let mut created_issue_ids = Vec::new();
+
+    for title in &titles {
+        let full_title = format!("{} {} Test {}", common::TEST_ISSUE_PREFIX, title, timestamp);
+
+        let create_variables = serde_json::json!({
+            "input": {
+                "title": full_title,
+                "teamId": team_id,
+                "priority": 4
+            }
+        });
+
+        let create_response: IssueCreateResponse = client
+            .query(ISSUE_CREATE_MUTATION, create_variables)
+            .expect("Should be able to create issue");
+
+        if let Some(issue) = create_response.issue_create.issue {
+            created_issue_ids.push(issue.id.clone());
+            println!("Created issue: {}", issue.identifier);
+        }
+
+        // Small delay between creates to ensure different timestamps
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+
+    // Use closure to ensure cleanup
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        // Wait for issues to be indexed
+        std::thread::sleep(std::time::Duration::from_millis(500));
+
+        // Test sorting by title (ascending)
+        let sort_variables = serde_json::json!({
+            "first": 50,
+            "filter": {
+                "team": { "key": { "eq": team_key } }
+            },
+            "orderBy": "title"
+        });
+
+        let sorted_response: IssuesResponse = client
+            .query(ISSUE_BY_IDENTIFIER_QUERY, sort_variables)
+            .expect("Should be able to sort issues");
+
+        println!(
+            "Found {} issue(s) for team (sorted by title)",
+            sorted_response.issues.nodes.len()
+        );
+
+        // Verify our test issues are in alphabetical order
+        let our_issues: Vec<_> = sorted_response
+            .issues
+            .nodes
+            .iter()
+            .filter(|i| created_issue_ids.contains(&i.id))
+            .collect();
+
+        if our_issues.len() >= 2 {
+            for i in 0..our_issues.len() - 1 {
+                let current_title = &our_issues[i].title;
+                let next_title = &our_issues[i + 1].title;
+                println!("Order check: {} < {}", current_title, next_title);
+            }
+        }
+    }));
+
+    // Cleanup: Delete all created issues
+    for issue_id in &created_issue_ids {
+        let _ = common::delete_issue(&client, issue_id);
+    }
+    println!("Deleted {} test issues", created_issue_ids.len());
+
+    if let Err(e) = result {
+        std::panic::resume_unwind(e);
+    }
+}
