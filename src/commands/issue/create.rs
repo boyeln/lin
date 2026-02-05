@@ -36,6 +36,7 @@ use super::IssueCreateOptions;
 ///     assignee_id: None,
 ///     state_id: None,
 ///     priority: Some(2), // High priority
+///     estimate: None,
 ///     label_ids: None,
 ///     project_id: None,
 /// };
@@ -67,6 +68,10 @@ pub fn create_issue(
 
     if let Some(priority) = options.priority {
         input.insert("priority".to_string(), serde_json::json!(priority));
+    }
+
+    if let Some(estimate) = options.estimate {
+        input.insert("estimate".to_string(), serde_json::json!(estimate));
     }
 
     if let Some(label_ids) = options.label_ids {
@@ -124,6 +129,7 @@ mod tests {
                                 "title": "New Issue",
                                 "description": null,
                                 "priority": 0,
+                                "estimate": null,
                                 "state": null,
                                 "team": {
                                     "id": "team-1",
@@ -149,6 +155,7 @@ mod tests {
             assignee_id: None,
             state_id: None,
             priority: None,
+            estimate: None,
             label_ids: None,
             project_id: None,
         };
@@ -178,6 +185,7 @@ mod tests {
                                 "title": "Full Issue",
                                 "description": "Detailed description",
                                 "priority": 2,
+                                "estimate": null,
                                 "state": {
                                     "id": "state-1",
                                     "name": "In Progress",
@@ -214,6 +222,7 @@ mod tests {
             assignee_id: Some("user-1".to_string()),
             state_id: Some("state-1".to_string()),
             priority: Some(2),
+            estimate: None,
             label_ids: None,
             project_id: None,
         };
@@ -251,6 +260,7 @@ mod tests {
             assignee_id: None,
             state_id: None,
             priority: None,
+            estimate: None,
             label_ids: None,
             project_id: None,
         };
@@ -290,6 +300,7 @@ mod tests {
             assignee_id: None,
             state_id: None,
             priority: None,
+            estimate: None,
             label_ids: None,
             project_id: None,
         };

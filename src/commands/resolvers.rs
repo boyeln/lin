@@ -185,6 +185,65 @@ pub fn get_team_key(client: &GraphQLClient, team_id: &str) -> Result<String> {
     Ok(response.team.key)
 }
 
+/// Resolve an estimate name or numeric string to a numeric value.
+///
+/// If `use_cache` is true, tries to resolve the estimate from cached team data.
+/// Otherwise, or if the value is already numeric, returns the parsed value.
+///
+/// # Arguments
+///
+/// * `estimate_str` - Estimate name (e.g., "XS", "M", "L") or numeric value (e.g., "3", "5.0")
+/// * `team_key` - Team key for context (e.g., "ENG") - required for cache lookups
+/// * `use_cache` - Whether to use cached data
+///
+/// # Returns
+///
+/// The numeric estimate value.
+pub fn resolve_estimate_value(
+    estimate_str: &str,
+    team_key: Option<&str>,
+    use_cache: bool,
+) -> Result<f64> {
+    // 1. Try to parse as a number first
+    if let Ok(value) = estimate_str.parse::<f64>() {
+        return Ok(value);
+    }
+
+    // 2. If not a number, try to resolve from cache (if enabled and team provided)
+    if use_cache {
+        if let Some(team) = team_key {
+            let config = Config::load()?;
+            if let Some(value) = config.get_estimate_value(team, estimate_str) {
+                return Ok(value);
+            }
+
+            // Cache miss - show helpful error
+            let available = config.get_all_estimates_for_team(team);
+            if available.is_empty() {
+                return Err(LinError::config(format!(
+                    "Estimate '{}' is not a number and no estimates are configured for team '{}'. \
+                    Configure estimates using the config file or provide a numeric value.",
+                    estimate_str, team
+                )));
+            } else {
+                return Err(LinError::config(format!(
+                    "Estimate '{}' not found for team '{}'. Available estimates: {}. \
+                    You can also use a numeric value directly.",
+                    estimate_str,
+                    team,
+                    available.join(", ")
+                )));
+            }
+        }
+    }
+
+    // 3. Not a number and cache not available/enabled
+    Err(LinError::parse(format!(
+        "Invalid estimate '{}': must be a numeric value",
+        estimate_str
+    )))
+}
+
 /// Sync a single team's data to the cache.
 ///
 /// Queries the team by key and all its workflow states, returning a CachedTeam.
@@ -218,6 +277,7 @@ fn sync_team_to_cache(client: &GraphQLClient, team_key: &str) -> Result<CachedTe
         id: team.id.clone(),
         name: team.name.clone(),
         states: state_map,
+        estimates: HashMap::new(),
     })
 }
 
