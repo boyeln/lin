@@ -3,7 +3,7 @@
 //! Commands for generating shell completion scripts for various shells.
 
 use clap::Command;
-use clap_complete::{generate, Shell};
+use clap_complete::{Shell, generate};
 use std::io;
 
 /// Generate shell completion scripts.

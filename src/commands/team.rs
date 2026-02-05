@@ -2,11 +2,11 @@
 //!
 //! Commands for listing and viewing team information from Linear.
 
-use crate::api::queries::team::{TEAMS_QUERY, TEAM_QUERY};
-use crate::api::GraphQLClient;
-use crate::models::{TeamResponse, TeamsResponse};
-use crate::output::{output, OutputFormat};
 use crate::Result;
+use crate::api::GraphQLClient;
+use crate::api::queries::team::{TEAM_QUERY, TEAMS_QUERY};
+use crate::models::{TeamResponse, TeamsResponse};
+use crate::output::{OutputFormat, output};
 
 /// List all teams in the organization.
 ///

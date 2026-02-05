@@ -2,11 +2,11 @@
 //!
 //! Provides commands for searching issues using Linear's full-text search capability.
 
-use crate::api::queries::search::ISSUE_SEARCH_QUERY;
-use crate::api::GraphQLClient;
-use crate::models::IssueSearchResponse;
-use crate::output::{output, OutputFormat};
 use crate::Result;
+use crate::api::GraphQLClient;
+use crate::api::queries::search::ISSUE_SEARCH_QUERY;
+use crate::models::IssueSearchResponse;
+use crate::output::{OutputFormat, output};
 
 /// Options for searching issues.
 #[derive(Debug, Clone, Default)]

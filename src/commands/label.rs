@@ -2,11 +2,11 @@
 //!
 //! Commands for listing and viewing label information from Linear.
 
-use crate::api::queries::label::{LABELS_QUERY, LABEL_QUERY, TEAM_LABELS_QUERY};
-use crate::api::GraphQLClient;
-use crate::models::{LabelResponse, LabelsResponse, TeamLabelsResponse};
-use crate::output::{output, OutputFormat};
 use crate::Result;
+use crate::api::GraphQLClient;
+use crate::api::queries::label::{LABEL_QUERY, LABELS_QUERY, TEAM_LABELS_QUERY};
+use crate::models::{LabelResponse, LabelsResponse, TeamLabelsResponse};
+use crate::output::{OutputFormat, output};
 
 /// Options for listing labels.
 #[derive(Debug, Clone, Default)]

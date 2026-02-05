@@ -1,16 +1,16 @@
 //! Get operations for issues (get single issue, with or without comments).
 
+use crate::Result;
+use crate::api::GraphQLClient;
 use crate::api::queries::issue::{
     ISSUE_BY_IDENTIFIER_QUERY, ISSUE_BY_IDENTIFIER_WITH_COMMENTS_QUERY, ISSUE_QUERY,
     ISSUE_WITH_COMMENTS_QUERY,
 };
-use crate::api::GraphQLClient;
 use crate::error::LinError;
 use crate::models::{
     IssueResponse, IssueWithCommentsResponse, IssuesResponse, IssuesWithCommentsResponse,
 };
-use crate::output::{output, OutputFormat};
-use crate::Result;
+use crate::output::{OutputFormat, output};
 
 use super::{is_uuid, parse_identifier};
 

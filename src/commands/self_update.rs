@@ -9,9 +9,9 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::LinError;
-use crate::output::{output, HumanDisplay, OutputFormat};
 use crate::Result;
+use crate::error::LinError;
+use crate::output::{HumanDisplay, OutputFormat, output};
 
 /// GitHub repository for releases.
 const GITHUB_REPO: &str = "boyeln/lin";

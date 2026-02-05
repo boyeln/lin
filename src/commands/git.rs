@@ -4,16 +4,16 @@
 //! Linear tracks these links through its attachment system, recognizing
 //! specific URL patterns for branches and PRs.
 
+use crate::Result;
+use crate::api::GraphQLClient;
 use crate::api::queries::attachment::{ATTACHMENT_CREATE_MUTATION, ISSUE_GIT_LINKS_QUERY};
 use crate::api::queries::issue::ISSUE_BY_IDENTIFIER_QUERY;
-use crate::api::GraphQLClient;
 use crate::commands::issue::is_uuid;
 use crate::error::LinError;
 use crate::models::{
     Attachment, AttachmentCreateResponse, IssueAttachmentsResponse, IssuesResponse,
 };
-use crate::output::{output, HumanDisplay, OutputFormat};
-use crate::Result;
+use crate::output::{HumanDisplay, OutputFormat, output};
 use serde::Serialize;
 
 /// A git link (branch or PR) attached to an issue.

@@ -11,7 +11,7 @@ use lin::commands::{
     relation, search, self_update, team, user, workflow,
 };
 use lin::config::{Config, ConfigScope};
-use lin::output::{init_colors, output_error_with_format, OutputFormat};
+use lin::output::{OutputFormat, init_colors, output_error_with_format};
 
 /// lin - A command-line interface for Linear
 #[derive(Parser, Debug)]

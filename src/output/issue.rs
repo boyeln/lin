@@ -121,7 +121,7 @@ impl HumanDisplay for IssueWithComments {
         } else {
             for comment in &self.comments.nodes {
                 parts.push(String::new()); // blank line before each comment
-                                           // Indent comment output
+                // Indent comment output
                 for line in comment.human_fmt().lines() {
                     parts.push(format!("  {}", line));
                 }

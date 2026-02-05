@@ -4,12 +4,12 @@
 //! to the Linear API.
 
 use reqwest::blocking::Client;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
-use crate::error::LinError;
 use crate::Result;
+use crate::error::LinError;
 
 /// Default Linear API endpoint.
 pub const LINEAR_API_URL: &str = "https://api.linear.app/graphql";

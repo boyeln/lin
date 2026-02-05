@@ -13,8 +13,8 @@ use std::time::{Duration, SystemTime};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
-use crate::error::LinError;
 use crate::Result;
+use crate::error::LinError;
 
 /// Default TTL for teams (1 hour) - teams change infrequently.
 pub const TTL_TEAMS: Duration = Duration::from_secs(60 * 60);

@@ -102,7 +102,7 @@ impl HumanDisplay for CycleWithIssues {
         } else {
             for issue in &self.issues.nodes {
                 parts.push(String::new()); // blank line before each issue
-                                           // Indent issue output
+                // Indent issue output
                 for line in issue.human_fmt().lines() {
                     parts.push(format!("  {}", line));
                 }

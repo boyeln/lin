@@ -1,11 +1,11 @@
 //! Create operations for issues.
 
-use crate::api::queries::issue::ISSUE_CREATE_MUTATION;
+use crate::Result;
 use crate::api::GraphQLClient;
+use crate::api::queries::issue::ISSUE_CREATE_MUTATION;
 use crate::error::LinError;
 use crate::models::IssueCreateResponse;
-use crate::output::{output, OutputFormat};
-use crate::Result;
+use crate::output::{OutputFormat, output};
 
 use super::IssueCreateOptions;
 

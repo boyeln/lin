@@ -2,11 +2,11 @@
 //!
 //! Commands for listing, viewing, and creating documents in Linear.
 
-use crate::api::queries::document::{DOCUMENTS_QUERY, DOCUMENT_CREATE_MUTATION, DOCUMENT_QUERY};
-use crate::api::GraphQLClient;
-use crate::models::{DocumentCreateResponse, DocumentResponse, DocumentsResponse};
-use crate::output::{output, OutputFormat};
 use crate::Result;
+use crate::api::GraphQLClient;
+use crate::api::queries::document::{DOCUMENT_CREATE_MUTATION, DOCUMENT_QUERY, DOCUMENTS_QUERY};
+use crate::models::{DocumentCreateResponse, DocumentResponse, DocumentsResponse};
+use crate::output::{OutputFormat, output};
 
 /// Options for listing documents.
 #[derive(Debug, Clone, Default)]

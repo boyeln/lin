@@ -4,9 +4,9 @@
 
 use serde::Serialize;
 
-use crate::cache::{Cache, CacheStats};
-use crate::output::{output, HumanDisplay, OutputFormat};
 use crate::Result;
+use crate::cache::{Cache, CacheStats};
+use crate::output::{HumanDisplay, OutputFormat, output};
 
 /// Response for cache clear command.
 #[derive(Debug, Serialize)]
