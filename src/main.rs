@@ -7,12 +7,11 @@ use clap_complete::Shell;
 use lin::api::GraphQLClient;
 use lin::auth::require_api_token;
 use lin::commands::{
-    attachment, cache, comment, completions, cycle, document, git, issue, label, org, project,
+    attachment, cache, comment, completions, config, cycle, document, git, issue, label, project,
     relation, search, self_update, team, user, workflow,
 };
-use lin::config::Config;
-use lin::output::{init_colors, output_error_with_format, output_success, OutputFormat};
-use serde::Serialize;
+use lin::config::{Config, ConfigScope};
+use lin::output::{init_colors, output_error_with_format, OutputFormat};
 
 /// lin - A command-line interface for Linear
 #[derive(Parser, Debug)]
@@ -73,10 +72,10 @@ enum Commands {
         #[command(subcommand)]
         command: UserCommands,
     },
-    /// Manage organization configuration
-    Org {
+    /// Manage configuration
+    Config {
         #[command(subcommand)]
-        command: OrgCommands,
+        command: ConfigCommands,
     },
     /// Manage workflow states
     Workflow {
@@ -553,46 +552,78 @@ enum UserCommands {
     List,
 }
 
-/// Organization-related subcommands.
+/// Configuration-related subcommands.
 #[derive(Subcommand, Debug)]
-enum OrgCommands {
-    /// Add an organization (reads API token from stdin)
+enum ConfigCommands {
+    /// Set a configuration value
     #[command(after_help = "EXAMPLES:\n  \
-    echo \"lin_api_...\" | lin org add my-org")]
-    Add {
-        /// Name to identify this organization
-        name: String,
+    lin config set token lin_api_xxxxx\n  \
+    lin config set token lin_api_xxxxx --org acme\n  \
+    lin config set default-org acme\n  \
+    lin config set token lin_api_xxxxx --global\n  \
+    lin config set token lin_api_xxxxx --local")]
+    Set {
+        /// Configuration key (token, default-org)
+        key: String,
+        /// Configuration value
+        value: String,
+        /// Organization name (for token)
+        #[arg(short, long)]
+        org: Option<String>,
+        /// Save to global config (~/.config/lin/config.json)
+        #[arg(long, conflicts_with = "local")]
+        global: bool,
+        /// Save to local config (.lin/config.json)
+        #[arg(long, conflicts_with = "global")]
+        local: bool,
     },
-    /// Remove an organization
+    /// Get a configuration value
     #[command(after_help = "EXAMPLES:\n  \
-    lin org remove my-org")]
-    Remove {
-        /// Name of the organization to remove
-        name: String,
+    lin config get token\n  \
+    lin config get token --org acme\n  \
+    lin config get default-org")]
+    Get {
+        /// Configuration key (token, default-org)
+        key: String,
+        /// Organization name (for token)
+        #[arg(short, long)]
+        org: Option<String>,
     },
-    /// List all configured organizations
+    /// List all configuration values
     #[command(after_help = "EXAMPLES:\n  \
-    lin org list")]
-    List,
-    /// Set the default organization
-    #[command(after_help = "EXAMPLES:\n  \
-    lin org set-default my-org")]
-    SetDefault {
-        /// Name of the organization to set as default
-        name: String,
+    lin config list\n  \
+    lin config list --org acme\n  \
+    lin config list --show-origin")]
+    List {
+        /// Organization name (show specific org only)
+        #[arg(short, long)]
+        org: Option<String>,
+        /// Show where each setting comes from (local or global)
+        #[arg(long)]
+        show_origin: bool,
     },
-    /// Validate the configuration file
+    /// Remove a configuration value
     #[command(after_help = "EXAMPLES:\n  \
-    lin config validate")]
+    lin config unset token\n  \
+    lin config unset token --org acme\n  \
+    lin config unset default-org\n  \
+    lin config unset token --global")]
+    Unset {
+        /// Configuration key (token, default-org)
+        key: String,
+        /// Organization name (for token)
+        #[arg(short, long)]
+        org: Option<String>,
+        /// Remove from global config only
+        #[arg(long, conflicts_with = "local")]
+        global: bool,
+        /// Remove from local config only
+        #[arg(long, conflicts_with = "global")]
+        local: bool,
+    },
+    /// Validate configuration file
+    #[command(after_help = "EXAMPLES:\n  lin config validate")]
     Validate,
-    /// Show the current configuration (with masked tokens)
-    #[command(after_help = "EXAMPLES:\n  \
-    lin config show")]
-    Show,
-    /// Get information about the current Linear organization (requires API token)
-    #[command(after_help = "EXAMPLES:\n  \
-    lin org info")]
-    Info,
 }
 
 /// Cache-related subcommands.
@@ -606,13 +637,6 @@ enum CacheCommands {
     #[command(after_help = "EXAMPLES:\n  \
     lin cache clear")]
     Clear,
-}
-
-/// Placeholder response for unimplemented commands.
-#[derive(Serialize)]
-struct PlaceholderResponse {
-    message: &'static str,
-    command: String,
 }
 
 fn main() {
@@ -629,8 +653,8 @@ fn main() {
 
 fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
     match &cli.command {
-        // Org commands don't all require an API token
-        Commands::Org { command } => handle_org_command(command, &cli, format),
+        // Config commands don't all require an API token
+        Commands::Config { command } => handle_config_command(command, format),
         // Completions command doesn't require an API token
         Commands::Completions { shell } => {
             let mut cmd = Cli::command();
@@ -672,7 +696,7 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
                     state,
                     limit,
                 } => handle_search_command(&token, &query, team, assignee, state, limit, format),
-                Commands::Org { .. }
+                Commands::Config { .. }
                 | Commands::Completions { .. }
                 | Commands::Cache { .. }
                 | Commands::Update { .. } => {
@@ -1002,26 +1026,44 @@ fn handle_document_command(
     }
 }
 
-fn handle_org_command(command: &OrgCommands, cli: &Cli, format: OutputFormat) -> lin::Result<()> {
+fn handle_config_command(command: &ConfigCommands, format: OutputFormat) -> lin::Result<()> {
     match command {
-        OrgCommands::Add { name } => org::add_org(name, format),
-        OrgCommands::Remove { name } => org::remove_org(name, format),
-        OrgCommands::List => org::list_orgs(format),
-        OrgCommands::SetDefault { name } => org::set_default_org(name, format),
-        OrgCommands::Validate => org::validate_config(format),
-        OrgCommands::Show => org::show_config(format),
-        OrgCommands::Info => {
-            // Info requires API token
-            let config = Config::load()?;
-            let _token = require_api_token(cli.api_token.as_deref(), &config, cli.org.as_deref())?;
-
-            let response = PlaceholderResponse {
-                message: "Command not yet implemented",
-                command: "org info".into(),
+        ConfigCommands::Set {
+            key,
+            value,
+            org,
+            global,
+            local,
+        } => {
+            let scope = if *global {
+                Some(ConfigScope::Global)
+            } else if *local {
+                Some(ConfigScope::Local)
+            } else {
+                None
             };
-            output_success(&response);
-            Ok(())
+            config::set_config(key, value, org.as_deref(), scope, format)
         }
+        ConfigCommands::Get { key, org } => config::get_config(key, org.as_deref(), format),
+        ConfigCommands::List { org, show_origin } => {
+            config::list_config(org.as_deref(), *show_origin, format)
+        }
+        ConfigCommands::Unset {
+            key,
+            org,
+            global,
+            local,
+        } => {
+            let scope = if *global {
+                Some(ConfigScope::Global)
+            } else if *local {
+                Some(ConfigScope::Local)
+            } else {
+                None
+            };
+            config::unset_config(key, org.as_deref(), scope, format)
+        }
+        ConfigCommands::Validate => config::validate_config(format),
     }
 }
 
