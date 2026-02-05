@@ -19,6 +19,16 @@ pub struct Team {
     pub description: Option<String>,
 }
 
+/// Basic team information (ID and key only).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TeamBasic {
+    /// Unique identifier for the team.
+    pub id: String,
+    /// The team's key/prefix (e.g., "ENG").
+    pub key: String,
+}
+
 /// A paginated list of teams.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

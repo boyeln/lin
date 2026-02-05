@@ -19,6 +19,24 @@ query Teams($first: Int) {
 }
 "#;
 
+/// Query to get teams filtered by key.
+///
+/// Variables:
+/// - `filter` (TeamFilter!): Filter containing the team key
+///
+/// Returns: `TeamsResponse`
+pub const TEAM_BY_KEY_QUERY: &str = r#"
+query TeamByKey($filter: TeamFilter!) {
+    teams(filter: $filter, first: 1) {
+        nodes {
+            id
+            key
+            name
+        }
+    }
+}
+"#;
+
 /// Query to get a single team by ID.
 ///
 /// Variables:
