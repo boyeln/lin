@@ -38,6 +38,9 @@ pub struct OrgCache {
     /// Map of team keys (e.g., "ENG") to cached team data
     #[serde(default)]
     pub teams: HashMap<String, CachedTeam>,
+    /// Map of project slugs to project UUIDs
+    #[serde(default)]
+    pub projects: HashMap<String, String>,
     /// Last time the cache was synced (ISO 8601 timestamp)
     pub last_sync: Option<String>,
 }
@@ -342,6 +345,137 @@ impl Config {
     /// List all configured organization names.
     pub fn list_orgs(&self) -> Vec<&str> {
         self.orgs.keys().map(|s| s.as_str()).collect()
+    }
+
+    /// Slugify a project name for use as a human-readable identifier.
+    ///
+    /// Converts to lowercase, replaces spaces and special characters with dashes,
+    /// and removes multiple consecutive dashes.
+    pub fn slugify(name: &str) -> String {
+        name.to_lowercase()
+            .chars()
+            .map(|c| {
+                if c.is_alphanumeric() {
+                    c
+                } else if c.is_whitespace() || c == '-' || c == '_' {
+                    '-'
+                } else {
+                    '\0' // Will be filtered out
+                }
+            })
+            .filter(|&c| c != '\0')
+            .collect::<String>()
+            .split('-')
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+            .join("-")
+    }
+
+    /// Generate a unique slug for a project, handling conflicts by appending UUID prefix.
+    ///
+    /// If the base slug conflicts with an existing slug for a different project,
+    /// appends characters from the UUID until unique (starting with 3 chars).
+    fn generate_unique_slug(
+        base_slug: &str,
+        project_id: &str,
+        existing_slugs: &HashMap<String, String>,
+    ) -> String {
+        // If no conflict, use base slug
+        if !existing_slugs.contains_key(base_slug) {
+            return base_slug.to_string();
+        }
+
+        // If conflict but it's the same project, keep the slug
+        if existing_slugs.get(base_slug) == Some(&project_id.to_string()) {
+            return base_slug.to_string();
+        }
+
+        // Conflict with different project - append UUID prefix
+        let uuid_chars: Vec<char> = project_id.chars().filter(|c| c.is_alphanumeric()).collect();
+        let mut suffix_len = 3;
+
+        loop {
+            let suffix: String = uuid_chars.iter().take(suffix_len).collect();
+            let candidate = format!("{}-{}", base_slug, suffix);
+
+            // Check if this candidate is available or already assigned to this project
+            if !existing_slugs.contains_key(&candidate)
+                || existing_slugs.get(&candidate) == Some(&project_id.to_string())
+            {
+                return candidate;
+            }
+
+            suffix_len += 1;
+            if suffix_len > uuid_chars.len() {
+                // Fallback to full UUID if we run out of characters
+                return format!("{}-{}", base_slug, project_id);
+            }
+        }
+    }
+
+    /// Cache projects for the active organization.
+    ///
+    /// Generates slugs for each project, handling conflicts automatically.
+    ///
+    /// # Arguments
+    ///
+    /// * `projects` - List of projects to cache (tuples of id and name)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if no active organization is set.
+    pub fn cache_projects(&mut self, projects: Vec<(String, String)>) -> Result<()> {
+        let org = self.get_active_org_mut()?;
+        let mut slug_map = HashMap::new();
+
+        for (id, name) in projects {
+            let base_slug = Self::slugify(&name);
+            let unique_slug = Self::generate_unique_slug(&base_slug, &id, &slug_map);
+            slug_map.insert(unique_slug, id);
+        }
+
+        org.cache.projects = slug_map;
+        Ok(())
+    }
+
+    /// Get a project UUID from the cache by slug or UUID.
+    ///
+    /// If the input looks like a UUID (contains dashes and is long), returns it directly.
+    /// Otherwise, looks it up in the slug cache.
+    ///
+    /// Returns None if the slug is not in the cache.
+    pub fn get_project_id(&self, slug_or_id: &str) -> Option<String> {
+        let org = self.get_active_org().ok()?;
+
+        // If it looks like a UUID, return it directly
+        if slug_or_id.len() > 30 && slug_or_id.contains('-') {
+            return Some(slug_or_id.to_string());
+        }
+
+        // Otherwise, look up in cache
+        org.cache.projects.get(slug_or_id).cloned()
+    }
+
+    /// Get a project slug from the cache by UUID.
+    ///
+    /// Returns None if the UUID is not in the cache.
+    pub fn get_project_slug(&self, project_id: &str) -> Option<String> {
+        let org = self.get_active_org().ok()?;
+
+        // Find the slug that maps to this UUID
+        org.cache
+            .projects
+            .iter()
+            .find(|(_, id)| id.as_str() == project_id)
+            .map(|(slug, _)| slug.clone())
+    }
+
+    /// Get all project slugs from the active organization's cache.
+    pub fn get_all_project_slugs(&self) -> Vec<String> {
+        self.get_active_org()
+            .ok()
+            .map(|org| org.cache.projects.keys().cloned().collect())
+            .unwrap_or_default()
     }
 }
 
@@ -772,5 +906,174 @@ mod tests {
         let result = config.set_team_estimates("NOTEXIST", estimates);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    #[test]
+    fn test_slugify() {
+        assert_eq!(
+            Config::slugify("Q1 Backend Redesign"),
+            "q1-backend-redesign"
+        );
+        assert_eq!(Config::slugify("Mobile App v2"), "mobile-app-v2");
+        assert_eq!(Config::slugify("Infrastructure"), "infrastructure");
+        assert_eq!(Config::slugify("Project @ 2024"), "project-2024");
+        assert_eq!(Config::slugify("Multiple   Spaces"), "multiple-spaces");
+        assert_eq!(Config::slugify("dash-separated"), "dash-separated");
+        assert_eq!(Config::slugify("under_score"), "under-score");
+    }
+
+    #[test]
+    fn test_generate_unique_slug_no_conflict() {
+        let existing = HashMap::new();
+        let slug = Config::generate_unique_slug("test-project", "abc123", &existing);
+        assert_eq!(slug, "test-project");
+    }
+
+    #[test]
+    fn test_generate_unique_slug_with_conflict() {
+        let mut existing = HashMap::new();
+        existing.insert("test-project".to_string(), "different-id".to_string());
+
+        let slug = Config::generate_unique_slug("test-project", "abc123", &existing);
+        assert_eq!(slug, "test-project-abc");
+
+        // If that's also taken, try longer suffix
+        existing.insert("test-project-abc".to_string(), "another-id".to_string());
+        let slug = Config::generate_unique_slug("test-project", "abc123", &existing);
+        assert_eq!(slug, "test-project-abc1");
+    }
+
+    #[test]
+    fn test_generate_unique_slug_same_project() {
+        let mut existing = HashMap::new();
+        existing.insert("test-project".to_string(), "abc123".to_string());
+
+        // Same project ID should keep the same slug
+        let slug = Config::generate_unique_slug("test-project", "abc123", &existing);
+        assert_eq!(slug, "test-project");
+    }
+
+    #[test]
+    fn test_cache_projects() {
+        let mut config = Config::default();
+        config
+            .add_org("org".to_string(), "token".to_string())
+            .unwrap();
+
+        let projects = vec![
+            ("proj-1".to_string(), "Q1 Backend".to_string()),
+            ("proj-2".to_string(), "Frontend".to_string()),
+            ("proj-3".to_string(), "Backend".to_string()),
+        ];
+
+        config.cache_projects(projects).unwrap();
+
+        let org = config.get_active_org().unwrap();
+        assert_eq!(
+            org.cache.projects.get("q1-backend"),
+            Some(&"proj-1".to_string())
+        );
+        assert_eq!(
+            org.cache.projects.get("frontend"),
+            Some(&"proj-2".to_string())
+        );
+        assert_eq!(
+            org.cache.projects.get("backend"),
+            Some(&"proj-3".to_string())
+        );
+    }
+
+    #[test]
+    fn test_cache_projects_with_conflicts() {
+        let mut config = Config::default();
+        config
+            .add_org("org".to_string(), "token".to_string())
+            .unwrap();
+
+        let projects = vec![
+            ("abc123".to_string(), "Mobile App".to_string()),
+            ("xyz789".to_string(), "Mobile App".to_string()),
+        ];
+
+        config.cache_projects(projects).unwrap();
+
+        let org = config.get_active_org().unwrap();
+        // First project gets the base slug
+        assert_eq!(
+            org.cache.projects.get("mobile-app"),
+            Some(&"abc123".to_string())
+        );
+        // Second project gets a suffix
+        assert!(org.cache.projects.contains_key("mobile-app-xyz"));
+    }
+
+    #[test]
+    fn test_get_project_id_from_slug() {
+        let mut config = Config::default();
+        config
+            .add_org("org".to_string(), "token".to_string())
+            .unwrap();
+
+        let projects = vec![("proj-123".to_string(), "Test Project".to_string())];
+        config.cache_projects(projects).unwrap();
+
+        let id = config.get_project_id("test-project");
+        assert_eq!(id, Some("proj-123".to_string()));
+    }
+
+    #[test]
+    fn test_get_project_id_from_uuid() {
+        let mut config = Config::default();
+        config
+            .add_org("org".to_string(), "token".to_string())
+            .unwrap();
+
+        // UUID-like strings should be returned directly
+        let id = config.get_project_id("abc-123-def-456-ghi-789-long-uuid");
+        assert_eq!(id, Some("abc-123-def-456-ghi-789-long-uuid".to_string()));
+    }
+
+    #[test]
+    fn test_get_project_id_not_found() {
+        let mut config = Config::default();
+        config
+            .add_org("org".to_string(), "token".to_string())
+            .unwrap();
+
+        let id = config.get_project_id("nonexistent");
+        assert!(id.is_none());
+    }
+
+    #[test]
+    fn test_get_project_slug() {
+        let mut config = Config::default();
+        config
+            .add_org("org".to_string(), "token".to_string())
+            .unwrap();
+
+        let projects = vec![("proj-123".to_string(), "Test Project".to_string())];
+        config.cache_projects(projects).unwrap();
+
+        let slug = config.get_project_slug("proj-123");
+        assert_eq!(slug, Some("test-project".to_string()));
+    }
+
+    #[test]
+    fn test_get_all_project_slugs() {
+        let mut config = Config::default();
+        config
+            .add_org("org".to_string(), "token".to_string())
+            .unwrap();
+
+        let projects = vec![
+            ("proj-1".to_string(), "Project A".to_string()),
+            ("proj-2".to_string(), "Project B".to_string()),
+        ];
+        config.cache_projects(projects).unwrap();
+
+        let slugs = config.get_all_project_slugs();
+        assert_eq!(slugs.len(), 2);
+        assert!(slugs.contains(&"project-a".to_string()));
+        assert!(slugs.contains(&"project-b".to_string()));
     }
 }
