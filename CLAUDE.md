@@ -52,3 +52,10 @@ cargo clippy && cargo fmt --check # Lint before commit
   ```
 - Do not commit if any of these checks fail
 - Do not mention Claude or AI assistance in commit messages
+
+## Changelog
+
+- Update `CHANGELOG.md` when adding features or fixing bugs
+- Add entries under `## [Unreleased]` section
+- Use format: `- Description of change`
+- Group by: Added, Changed, Fixed, Removed

@@ -18,3 +18,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local caching with configurable TTLs
 - Shell completions (bash, zsh, fish, powershell, elvish)
 - JSON output mode for scripting
+- Self-update command (`lin update`, `lin update --check`)
+- Install script for quick installation via `curl | bash`
