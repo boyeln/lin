@@ -51,7 +51,7 @@ enum Commands {
     /// Manage issues
     Issue {
         #[command(subcommand)]
-        command: IssueCommands,
+        command: Box<IssueCommands>,
     },
     /// Manage comments on issues
     Comment {
@@ -636,7 +636,7 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
             let token = require_api_token(cli.api_token.as_deref(), &config, cli.org.as_deref())?;
 
             match cli.command {
-                Commands::Issue { command } => handle_issue_command(command, &token, format),
+                Commands::Issue { command } => handle_issue_command(*command, &token, format),
                 Commands::Comment { command } => handle_comment_command(command, &token, format),
                 Commands::Attachment { command } => {
                     handle_attachment_command(command, &token, format)

@@ -657,12 +657,12 @@ pub struct IssuesResponse {
     pub issues: IssueConnection,
 }
 
-/// Response wrapper for the issue search query.
+/// Response wrapper for the issue search query (using issues query with filter).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IssueSearchResponse {
     /// Search results as paginated list of issues.
-    pub issue_search: IssueConnection,
+    pub issues: IssueConnection,
 }
 
 /// Team with workflow states for the workflow states query.
@@ -1795,7 +1795,7 @@ mod tests {
     #[test]
     fn test_issue_search_response_deserialization() {
         let json = r#"{
-            "issueSearch": {
+            "issues": {
                 "nodes": [
                     {
                         "id": "issue-1",
@@ -1813,9 +1813,9 @@ mod tests {
             }
         }"#;
         let response: IssueSearchResponse = serde_json::from_str(json).unwrap();
-        assert_eq!(response.issue_search.nodes.len(), 1);
-        assert_eq!(response.issue_search.nodes[0].identifier, "ENG-123");
-        assert_eq!(response.issue_search.nodes[0].title, "Search result issue");
+        assert_eq!(response.issues.nodes.len(), 1);
+        assert_eq!(response.issues.nodes[0].identifier, "ENG-123");
+        assert_eq!(response.issues.nodes[0].title, "Search result issue");
     }
 
     #[test]

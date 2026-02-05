@@ -55,8 +55,14 @@ pub fn search_issues(
     options: SearchOptions,
     format: OutputFormat,
 ) -> Result<()> {
-    // Build the filter object
+    // Build the filter object with searchableContent for text search
     let mut filter = serde_json::Map::new();
+
+    // Add searchableContent filter for the query text
+    filter.insert(
+        "searchableContent".to_string(),
+        serde_json::json!({ "contains": query }),
+    );
 
     // Add team filter if specified
     if let Some(team_key) = &options.team {
@@ -95,22 +101,18 @@ pub fn search_issues(
 
     // Build variables
     let mut variables = serde_json::Map::new();
-    variables.insert("query".to_string(), serde_json::json!(query));
     variables.insert(
         "first".to_string(),
         serde_json::json!(options.limit.unwrap_or(50)),
     );
-
-    if !filter.is_empty() {
-        variables.insert("filter".to_string(), serde_json::Value::Object(filter));
-    }
+    variables.insert("filter".to_string(), serde_json::Value::Object(filter));
 
     let response: IssueSearchResponse = client.query(
         queries::ISSUE_SEARCH_QUERY,
         serde_json::Value::Object(variables),
     )?;
 
-    output(&response.issue_search.nodes, format);
+    output(&response.issues.nodes, format);
     Ok(())
 }
 
@@ -134,7 +136,7 @@ mod tests {
             .with_body(
                 r##"{
                     "data": {
-                        "issueSearch": {
+                        "issues": {
                             "nodes": [
                                 {
                                     "id": "issue-1",
@@ -185,7 +187,7 @@ mod tests {
             .with_body(
                 r#"{
                     "data": {
-                        "issueSearch": {
+                        "issues": {
                             "nodes": []
                         }
                     }
@@ -216,7 +218,7 @@ mod tests {
             .with_body(
                 r#"{
                     "data": {
-                        "issueSearch": {
+                        "issues": {
                             "nodes": []
                         }
                     }
@@ -265,7 +267,7 @@ mod tests {
             .with_body(
                 r#"{
                     "data": {
-                        "issueSearch": {
+                        "issues": {
                             "nodes": []
                         }
                     }
@@ -302,7 +304,7 @@ mod tests {
             .with_body(
                 r#"{
                     "data": {
-                        "issueSearch": {
+                        "issues": {
                             "nodes": []
                         }
                     }
@@ -333,7 +335,7 @@ mod tests {
             .with_body(
                 r##"{
                     "data": {
-                        "issueSearch": {
+                        "issues": {
                             "nodes": [
                                 {
                                     "id": "issue-2",
