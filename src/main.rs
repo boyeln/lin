@@ -5,13 +5,15 @@
 use clap::{CommandFactory, Parser, Subcommand};
 use clap_complete::Shell;
 use lin::api::GraphQLClient;
-use lin::auth::require_api_token;
+use lin::auth;
 use lin::commands::{
-    attachment, cache, comment, completions, config, cycle, document, git, issue, label, project,
-    relation, search, self_update, team, user, workflow,
+    attachment, cache, comment, completions, cycle, document, git, issue, label, project, relation,
+    resolvers, search, self_update, team, user, workflow,
 };
-use lin::config::{Config, ConfigScope};
+use lin::config::Config;
+use lin::error::LinError;
 use lin::output::{OutputFormat, init_colors, output_error_with_format};
+use std::env;
 
 /// lin - A command-line interface for Linear
 #[derive(Parser, Debug)]
@@ -24,10 +26,6 @@ lin issue get ENG-123\n  \
 lin user me\n  \
 lin --json issue list | jq '.data[].identifier'")]
 struct Cli {
-    /// Linear API token (can also be set via LINEAR_API_TOKEN env var)
-    #[arg(long, global = true)]
-    api_token: Option<String>,
-
     /// Organization to use (uses default if not specified)
     #[arg(long, short, global = true)]
     org: Option<String>,
@@ -72,10 +70,10 @@ enum Commands {
         #[command(subcommand)]
         command: UserCommands,
     },
-    /// Manage configuration
-    Config {
+    /// Authenticate and manage organizations
+    Auth {
         #[command(subcommand)]
-        command: ConfigCommands,
+        command: AuthCommands,
     },
     /// Manage workflow states
     Workflow {
@@ -560,78 +558,45 @@ enum UserCommands {
     List,
 }
 
-/// Configuration-related subcommands.
+/// Authentication-related subcommands.
 #[derive(Subcommand, Debug)]
-enum ConfigCommands {
-    /// Set a configuration value
+enum AuthCommands {
+    /// Authenticate with a Linear organization
     #[command(after_help = "EXAMPLES:\n  \
-    lin config set token lin_api_xxxxx\n  \
-    lin config set token lin_api_xxxxx --org acme\n  \
-    lin config set default-org acme\n  \
-    lin config set token lin_api_xxxxx --global\n  \
-    lin config set token lin_api_xxxxx --local")]
-    Set {
-        /// Configuration key (token, default-org)
-        key: String,
-        /// Configuration value
-        value: String,
-        /// Organization name (for token)
-        #[arg(short, long)]
-        org: Option<String>,
-        /// Save to global config (~/.config/lin/config.json)
-        #[arg(long, conflicts_with = "local")]
-        global: bool,
-        /// Save to local config (.lin/config.json)
-        #[arg(long, conflicts_with = "global")]
-        local: bool,
+    lin auth add my-org lin_api_xxxxx\n  \
+    lin auth my-org lin_api_xxxxx")]
+    Add {
+        /// Organization name (e.g., "work", "personal")
+        name: String,
+        /// Linear API token
+        token: String,
     },
-    /// Get a configuration value
+    /// Switch to a different organization
     #[command(after_help = "EXAMPLES:\n  \
-    lin config get token\n  \
-    lin config get token --org acme\n  \
-    lin config get default-org")]
-    Get {
-        /// Configuration key (token, default-org)
-        key: String,
-        /// Organization name (for token)
-        #[arg(short, long)]
-        org: Option<String>,
+    lin auth switch work")]
+    Switch {
+        /// Organization name
+        name: String,
     },
-    /// List all configuration values
+    /// List all authenticated organizations
     #[command(after_help = "EXAMPLES:\n  \
-    lin config list\n  \
-    lin config list --org acme\n  \
-    lin config list --show-origin")]
-    List {
-        /// Organization name (show specific org only)
-        #[arg(short, long)]
-        org: Option<String>,
-        /// Show where each setting comes from (local or global)
-        #[arg(long)]
-        show_origin: bool,
-    },
-    /// Remove a configuration value
+    lin auth list")]
+    List,
+    /// Remove an organization
     #[command(after_help = "EXAMPLES:\n  \
-    lin config unset token\n  \
-    lin config unset token --org acme\n  \
-    lin config unset default-org\n  \
-    lin config unset token --global")]
-    Unset {
-        /// Configuration key (token, default-org)
-        key: String,
-        /// Organization name (for token)
-        #[arg(short, long)]
-        org: Option<String>,
-        /// Remove from global config only
-        #[arg(long, conflicts_with = "local")]
-        global: bool,
-        /// Remove from local config only
-        #[arg(long, conflicts_with = "global")]
-        local: bool,
+    lin auth remove work")]
+    Remove {
+        /// Organization name
+        name: String,
     },
-    /// Validate configuration file
-    #[command(after_help = "EXAMPLES:\n  lin config validate")]
-    Validate,
+    /// Show status of current organization
+    #[command(after_help = "EXAMPLES:\n  \
+    lin auth status")]
+    Status,
+    /// Sync teams and workflow states
+    #[command(after_help = "EXAMPLES:\n  \
+    lin auth sync")]
+    Sync,
 }
 
 /// Cache-related subcommands.
@@ -661,8 +626,8 @@ fn main() {
 
 fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
     match &cli.command {
-        // Config commands don't all require an API token
-        Commands::Config { command } => handle_config_command(command, format),
+        // Auth commands don't require being authenticated yet
+        Commands::Auth { command } => handle_auth_command(command, format),
         // Completions command doesn't require an API token
         Commands::Completions { shell } => {
             let mut cmd = Cli::command();
@@ -681,30 +646,33 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
         }
         // All other commands require an API token
         _ => {
-            let config = Config::load()?;
-            let token = require_api_token(cli.api_token.as_deref(), &config, cli.org.as_deref())?;
+            let (client, use_cache) = get_client_and_mode()?;
 
             match cli.command {
-                Commands::Issue { command } => handle_issue_command(*command, &token, format),
-                Commands::Comment { command } => handle_comment_command(command, &token, format),
-                Commands::Attachment { command } => {
-                    handle_attachment_command(command, &token, format)
+                Commands::Issue { command } => {
+                    handle_issue_command(*command, client, use_cache, cli.no_cache, format)
                 }
-                Commands::Team { command } => handle_team_command(command, &token, format),
-                Commands::User { command } => handle_user_command(command, &token, format),
-                Commands::Workflow { command } => handle_workflow_command(command, &token, format),
-                Commands::Project { command } => handle_project_command(command, &token, format),
-                Commands::Cycle { command } => handle_cycle_command(command, &token, format),
-                Commands::Label { command } => handle_label_command(command, &token, format),
-                Commands::Document { command } => handle_document_command(command, &token, format),
+                Commands::Comment { command } => handle_comment_command(command, client, format),
+                Commands::Attachment { command } => {
+                    handle_attachment_command(command, client, format)
+                }
+                Commands::Team { command } => handle_team_command(command, client, format),
+                Commands::User { command } => handle_user_command(command, client, format),
+                Commands::Workflow { command } => {
+                    handle_workflow_command(command, client, use_cache, format)
+                }
+                Commands::Project { command } => handle_project_command(command, client, format),
+                Commands::Cycle { command } => handle_cycle_command(command, client, format),
+                Commands::Label { command } => handle_label_command(command, client, format),
+                Commands::Document { command } => handle_document_command(command, client, format),
                 Commands::Search {
                     query,
                     team,
                     assignee,
                     state,
                     limit,
-                } => handle_search_command(&token, &query, team, assignee, state, limit, format),
-                Commands::Config { .. }
+                } => handle_search_command(client, &query, team, assignee, state, limit, format),
+                Commands::Auth { .. }
                 | Commands::Completions { .. }
                 | Commands::Cache { .. }
                 | Commands::Update { .. } => {
@@ -715,12 +683,55 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
     }
 }
 
+/// Get a GraphQL client and determine whether to use cache.
+///
+/// Returns (client, use_cache) where:
+/// - client: GraphQL client initialized with the API token
+/// - use_cache: true if using config-based auth (cache available), false if using env var
+///
+/// # Errors
+///
+/// Returns an error if no authentication is available.
+fn get_client_and_mode() -> lin::Result<(GraphQLClient, bool)> {
+    // Check if LINEAR_API_TOKEN env var is set
+    if let Ok(token) = env::var(auth::LINEAR_API_TOKEN_ENV) {
+        if !token.is_empty() {
+            return Ok((GraphQLClient::new(&token), false));
+        }
+    }
+
+    // Try to load config and get active org token
+    let config = Config::load()?;
+    match config.get_token(None) {
+        Ok(token) => Ok((GraphQLClient::new(&token), true)),
+        Err(_) => Err(LinError::config(
+            "Not authenticated. Run: lin auth <name> <token>".to_string(),
+        )),
+    }
+}
+
+fn handle_auth_command(command: &AuthCommands, format: OutputFormat) -> lin::Result<()> {
+    match command {
+        AuthCommands::Add { name, token } => {
+            lin::commands::auth::auth_add(name.clone(), token.clone(), format)
+        }
+        AuthCommands::Switch { name } => lin::commands::auth::auth_switch(name.clone(), format),
+        AuthCommands::List => lin::commands::auth::auth_list(format),
+        AuthCommands::Remove { name } => lin::commands::auth::auth_remove(name.clone(), format),
+        AuthCommands::Status => lin::commands::auth::auth_status(format),
+        AuthCommands::Sync => lin::commands::auth::auth_sync(format),
+    }
+}
+
 fn handle_issue_command(
     command: IssueCommands,
-    token: &str,
+    client: GraphQLClient,
+    use_cache: bool,
+    no_cache_flag: bool,
     format: OutputFormat,
 ) -> lin::Result<()> {
-    let client = GraphQLClient::new(token);
+    // Determine effective cache usage (no_cache_flag can override use_cache)
+    let effective_cache = use_cache && !no_cache_flag;
 
     match command {
         IssueCommands::List {
@@ -821,12 +832,27 @@ fn handle_issue_command(
             labels,
             project,
         } => {
+            // Resolve team key to team ID
+            let team_id = resolvers::resolve_team_id(&client, &team, effective_cache)?;
+
+            // Resolve state name to state ID if provided
+            let state_id = if let Some(state_name) = state {
+                Some(resolvers::resolve_state_id(
+                    &client,
+                    &team,
+                    &state_name,
+                    effective_cache,
+                )?)
+            } else {
+                None
+            };
+
             let options = issue::IssueCreateOptions {
                 title,
-                team_id: team,
+                team_id,
                 description,
                 assignee_id: assignee,
-                state_id: state,
+                state_id,
                 priority: priority.map(|p| p as i32),
                 label_ids: labels,
                 project_id: project,
@@ -843,11 +869,52 @@ fn handle_issue_command(
             labels,
             project,
         } => {
+            // Resolve state name to state ID if provided and not already a UUID
+            let state_id = if let Some(state_name) = state {
+                if issue::is_uuid(&state_name) {
+                    Some(state_name)
+                } else {
+                    // First resolve identifier to UUID if needed
+                    let issue_id = if issue::is_uuid(&identifier) {
+                        identifier.clone()
+                    } else {
+                        // Parse identifier and look up issue
+                        let (team_key, number) = issue::parse_identifier(&identifier)?;
+                        let lookup_variables = serde_json::json!({
+                            "filter": {
+                                "team": { "key": { "eq": team_key } },
+                                "number": { "eq": number }
+                            }
+                        });
+                        let lookup_response: lin::models::IssuesResponse = client.query(
+                            lin::api::queries::issue::ISSUE_BY_IDENTIFIER_QUERY,
+                            lookup_variables,
+                        )?;
+                        if lookup_response.issues.nodes.is_empty() {
+                            return Err(LinError::api(format!("Issue '{}' not found", identifier)));
+                        }
+                        lookup_response.issues.nodes[0].id.clone()
+                    };
+
+                    // Get issue's team ID to resolve state
+                    let team_id = resolvers::get_issue_team_id(&client, &issue_id)?;
+                    let team_key = resolvers::get_team_key(&client, &team_id)?;
+                    Some(resolvers::resolve_state_id(
+                        &client,
+                        &team_key,
+                        &state_name,
+                        effective_cache,
+                    )?)
+                }
+            } else {
+                None
+            };
+
             let options = issue::IssueUpdateOptions {
                 title,
                 description,
                 assignee_id: assignee,
-                state_id: state,
+                state_id,
                 priority: priority.map(|p| p as i32),
                 label_ids: labels,
                 project_id: project,
@@ -896,11 +963,9 @@ fn handle_issue_command(
 
 fn handle_comment_command(
     command: CommentCommands,
-    token: &str,
+    client: GraphQLClient,
     format: OutputFormat,
 ) -> lin::Result<()> {
-    let client = GraphQLClient::new(token);
-
     match command {
         CommentCommands::List { issue } => comment::list_comments(&client, &issue, format),
         CommentCommands::Add { issue, body } => {
@@ -911,11 +976,9 @@ fn handle_comment_command(
 
 fn handle_attachment_command(
     command: AttachmentCommands,
-    token: &str,
+    client: GraphQLClient,
     format: OutputFormat,
 ) -> lin::Result<()> {
-    let client = GraphQLClient::new(token);
-
     match command {
         AttachmentCommands::List { issue } => attachment::list_attachments(&client, &issue, format),
         AttachmentCommands::Upload { issue, file_path } => {
@@ -927,11 +990,9 @@ fn handle_attachment_command(
 
 fn handle_team_command(
     command: TeamCommands,
-    token: &str,
+    client: GraphQLClient,
     format: OutputFormat,
 ) -> lin::Result<()> {
-    let client = GraphQLClient::new(token);
-
     match command {
         TeamCommands::List => team::list_teams(&client, format),
         TeamCommands::Get { identifier } => team::get_team(&client, &identifier, format),
@@ -940,11 +1001,9 @@ fn handle_team_command(
 
 fn handle_user_command(
     command: UserCommands,
-    token: &str,
+    client: GraphQLClient,
     format: OutputFormat,
 ) -> lin::Result<()> {
-    let client = GraphQLClient::new(token);
-
     match command {
         UserCommands::Me => user::me(&client, format),
         UserCommands::List => user::list_users(&client, format),
@@ -953,23 +1012,24 @@ fn handle_user_command(
 
 fn handle_workflow_command(
     command: WorkflowCommands,
-    token: &str,
+    client: GraphQLClient,
+    use_cache: bool,
     format: OutputFormat,
 ) -> lin::Result<()> {
-    let client = GraphQLClient::new(token);
-
     match command {
-        WorkflowCommands::List { team } => workflow::list_workflow_states(&client, &team, format),
+        WorkflowCommands::List { team } => {
+            // Resolve team key to team ID
+            let team_id = resolvers::resolve_team_id(&client, &team, use_cache)?;
+            workflow::list_workflow_states(&client, &team_id, format)
+        }
     }
 }
 
 fn handle_project_command(
     command: ProjectCommands,
-    token: &str,
+    client: GraphQLClient,
     format: OutputFormat,
 ) -> lin::Result<()> {
-    let client = GraphQLClient::new(token);
-
     match command {
         ProjectCommands::List { team } => {
             let options = project::ProjectListOptions { team_key: team };
@@ -981,11 +1041,9 @@ fn handle_project_command(
 
 fn handle_cycle_command(
     command: CycleCommands,
-    token: &str,
+    client: GraphQLClient,
     format: OutputFormat,
 ) -> lin::Result<()> {
-    let client = GraphQLClient::new(token);
-
     match command {
         CycleCommands::List { team } => cycle::list_cycles(&client, &team, format),
         CycleCommands::Get { id } => cycle::get_cycle(&client, &id, format),
@@ -994,11 +1052,9 @@ fn handle_cycle_command(
 
 fn handle_label_command(
     command: LabelCommands,
-    token: &str,
+    client: GraphQLClient,
     format: OutputFormat,
 ) -> lin::Result<()> {
-    let client = GraphQLClient::new(token);
-
     match command {
         LabelCommands::List { team } => {
             let options = label::LabelListOptions { team_id: team };
@@ -1010,11 +1066,9 @@ fn handle_label_command(
 
 fn handle_document_command(
     command: DocumentCommands,
-    token: &str,
+    client: GraphQLClient,
     format: OutputFormat,
 ) -> lin::Result<()> {
-    let client = GraphQLClient::new(token);
-
     match command {
         DocumentCommands::List { project } => {
             let options = document::DocumentListOptions {
@@ -1038,49 +1092,8 @@ fn handle_document_command(
     }
 }
 
-fn handle_config_command(command: &ConfigCommands, format: OutputFormat) -> lin::Result<()> {
-    match command {
-        ConfigCommands::Set {
-            key,
-            value,
-            org,
-            global,
-            local,
-        } => {
-            let scope = if *global {
-                Some(ConfigScope::Global)
-            } else if *local {
-                Some(ConfigScope::Local)
-            } else {
-                None
-            };
-            config::set_config(key, value, org.as_deref(), scope, format)
-        }
-        ConfigCommands::Get { key, org } => config::get_config(key, org.as_deref(), format),
-        ConfigCommands::List { org, show_origin } => {
-            config::list_config(org.as_deref(), *show_origin, format)
-        }
-        ConfigCommands::Unset {
-            key,
-            org,
-            global,
-            local,
-        } => {
-            let scope = if *global {
-                Some(ConfigScope::Global)
-            } else if *local {
-                Some(ConfigScope::Local)
-            } else {
-                None
-            };
-            config::unset_config(key, org.as_deref(), scope, format)
-        }
-        ConfigCommands::Validate => config::validate_config(format),
-    }
-}
-
 fn handle_search_command(
-    token: &str,
+    client: GraphQLClient,
     query: &str,
     team: Option<String>,
     assignee: Option<String>,
@@ -1088,8 +1101,6 @@ fn handle_search_command(
     limit: u32,
     format: OutputFormat,
 ) -> lin::Result<()> {
-    let client = GraphQLClient::new(token);
-
     // If assignee is "me", we need to fetch the viewer ID first
     let viewer_id = if assignee.as_deref() == Some("me") {
         let response: lin::models::ViewerResponse = client.query(
