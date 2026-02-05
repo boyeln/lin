@@ -639,7 +639,7 @@ fn get_client_and_mode() -> lin::Result<(GraphQLClient, bool)> {
     match config.get_token(None) {
         Ok(token) => Ok((GraphQLClient::new(&token), true)),
         Err(_) => Err(LinError::config(
-            "Not authenticated. Run: lin auth <name> <token>".to_string(),
+            "Not authenticated. Run: lin auth add <name> <token>".to_string(),
         )),
     }
 }
