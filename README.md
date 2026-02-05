@@ -194,6 +194,12 @@ lin org add <name>
 lin org remove <name>
 lin org set-default <name>
 
+# Validate configuration file
+lin org validate
+
+# Show current configuration (with masked tokens)
+lin org show
+
 # Search for issues
 lin search "authentication bug"
 lin search "fix login" --team ENG --limit 10
@@ -375,7 +381,7 @@ The cache is stored in:
 | Shell completions | ✅ | Bash, zsh, fish, PowerShell, elvish completions |
 | Interactive TUI | ❌ | Interactive terminal UI for browsing |
 | Caching | ✅ | Cache responses for faster repeated queries |
-| Config validation | ❌ | Validate configuration file |
+| Config validation | ✅ | Validate configuration file |
 | Examples in help | ✅ | Add usage examples to --help output |
 | Human-friendly output | ✅ | Human-readable output (default) |
 | JSON output | ✅ | Machine-readable JSON output (--json flag) |

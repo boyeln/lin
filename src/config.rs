@@ -164,6 +164,156 @@ impl Config {
         self.default_org = Some(name.to_string());
         Ok(())
     }
+
+    /// Validate the configuration file.
+    ///
+    /// Performs the following checks:
+    /// - Valid JSON syntax (already validated on load)
+    /// - API tokens have correct format (start with `lin_api_`)
+    /// - Default organization exists in the organizations list
+    ///
+    /// # Returns
+    ///
+    /// Returns a `ConfigValidationResult` with validation status and any issues found.
+    pub fn validate(&self) -> ConfigValidationResult {
+        let mut issues = Vec::new();
+
+        // Check API token format for each organization
+        for (org_name, token) in &self.organizations {
+            if !token.starts_with("lin_api_") {
+                issues.push(ConfigValidationIssue {
+                    severity: ValidationSeverity::Warning,
+                    field: format!("organizations.{}", org_name),
+                    message: format!(
+                        "Token for organization '{}' may be invalid: does not start with 'lin_api_'",
+                        org_name
+                    ),
+                });
+            }
+
+            if token.is_empty() {
+                issues.push(ConfigValidationIssue {
+                    severity: ValidationSeverity::Error,
+                    field: format!("organizations.{}", org_name),
+                    message: format!("Token for organization '{}' is empty", org_name),
+                });
+            }
+        }
+
+        // Check default organization exists
+        if let Some(default) = &self.default_org {
+            if !self.organizations.contains_key(default) {
+                issues.push(ConfigValidationIssue {
+                    severity: ValidationSeverity::Error,
+                    field: "default_org".to_string(),
+                    message: format!(
+                        "Default organization '{}' does not exist in the organizations list",
+                        default
+                    ),
+                });
+            }
+        }
+
+        // Check for empty organization names
+        for org_name in self.organizations.keys() {
+            if org_name.trim().is_empty() {
+                issues.push(ConfigValidationIssue {
+                    severity: ValidationSeverity::Error,
+                    field: "organizations".to_string(),
+                    message: "Organization name cannot be empty".to_string(),
+                });
+            }
+        }
+
+        let is_valid = !issues
+            .iter()
+            .any(|i| i.severity == ValidationSeverity::Error);
+
+        ConfigValidationResult { is_valid, issues }
+    }
+
+    /// Load and validate the raw configuration file.
+    ///
+    /// This validates the JSON syntax separately from the Config::load() method
+    /// to provide more detailed error messages.
+    ///
+    /// # Returns
+    ///
+    /// Returns a tuple of (Config, Vec<ConfigValidationIssue>) with parse errors if any.
+    pub fn load_and_validate_file() -> Result<(Self, Vec<ConfigValidationIssue>)> {
+        let path = Self::config_path();
+        let mut parse_issues = Vec::new();
+
+        if !path.exists() {
+            parse_issues.push(ConfigValidationIssue {
+                severity: ValidationSeverity::Warning,
+                field: "config_file".to_string(),
+                message: format!("Configuration file does not exist at {}", path.display()),
+            });
+            return Ok((Config::default(), parse_issues));
+        }
+
+        let contents = fs::read_to_string(&path)?;
+
+        // Try to parse as JSON first to check syntax
+        let config: Config = match serde_json::from_str(&contents) {
+            Ok(c) => c,
+            Err(e) => {
+                return Err(LinError::parse(format!(
+                    "Invalid JSON syntax in config file: {}",
+                    e
+                )));
+            }
+        };
+
+        Ok((config, parse_issues))
+    }
+
+    /// Mask an API token for display, showing only the first 12 characters.
+    ///
+    /// # Arguments
+    ///
+    /// * `token` - The token to mask
+    ///
+    /// # Returns
+    ///
+    /// A masked version of the token like "lin_api_xxxx..."
+    pub fn mask_token(token: &str) -> String {
+        if token.len() <= 12 {
+            "*".repeat(token.len())
+        } else {
+            format!("{}...", &token[..12])
+        }
+    }
+}
+
+/// Result of configuration validation.
+#[derive(Debug, Clone)]
+pub struct ConfigValidationResult {
+    /// Whether the configuration is valid (no errors, may have warnings).
+    pub is_valid: bool,
+    /// List of validation issues found.
+    pub issues: Vec<ConfigValidationIssue>,
+}
+
+/// A single validation issue found in the configuration.
+#[derive(Debug, Clone)]
+pub struct ConfigValidationIssue {
+    /// Severity of the issue.
+    pub severity: ValidationSeverity,
+    /// The field or section with the issue.
+    pub field: String,
+    /// Human-readable description of the issue.
+    pub message: String,
+}
+
+/// Severity level of a validation issue.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ValidationSeverity {
+    /// Error - configuration is invalid.
+    Error,
+    /// Warning - configuration may work but has potential issues.
+    Warning,
 }
 
 #[cfg(test)]
@@ -345,5 +495,113 @@ mod tests {
         let path = Config::config_path();
         assert!(path.to_string_lossy().contains("lin"));
         assert!(path.to_string_lossy().contains("config.json"));
+    }
+
+    #[test]
+    fn test_validate_valid_config() {
+        let mut config = Config::default();
+        config.add_org("my-org", "lin_api_abc123xyz");
+
+        let result = config.validate();
+        assert!(result.is_valid);
+        assert!(result.issues.is_empty());
+    }
+
+    #[test]
+    fn test_validate_invalid_token_format() {
+        let mut config = Config::default();
+        config.add_org("my-org", "invalid_token_format");
+
+        let result = config.validate();
+        assert!(result.is_valid); // Warning doesn't make it invalid
+        assert_eq!(result.issues.len(), 1);
+        assert_eq!(result.issues[0].severity, ValidationSeverity::Warning);
+        assert!(result.issues[0]
+            .message
+            .contains("does not start with 'lin_api_'"));
+    }
+
+    #[test]
+    fn test_validate_empty_token() {
+        let mut config = Config::default();
+        config
+            .organizations
+            .insert("my-org".to_string(), String::new());
+        config.default_org = Some("my-org".to_string());
+
+        let result = config.validate();
+        assert!(!result.is_valid);
+        // Should have both empty token error and invalid format warning
+        assert!(result
+            .issues
+            .iter()
+            .any(|i| i.severity == ValidationSeverity::Error));
+        assert!(result.issues.iter().any(|i| i.message.contains("is empty")));
+    }
+
+    #[test]
+    fn test_validate_invalid_default_org() {
+        let mut config = Config::default();
+        config.add_org("existing-org", "lin_api_abc123xyz");
+        config.default_org = Some("nonexistent-org".to_string());
+
+        let result = config.validate();
+        assert!(!result.is_valid);
+        assert_eq!(result.issues.len(), 1);
+        assert_eq!(result.issues[0].severity, ValidationSeverity::Error);
+        assert!(result.issues[0]
+            .message
+            .contains("does not exist in the organizations list"));
+    }
+
+    #[test]
+    fn test_validate_empty_config() {
+        let config = Config::default();
+
+        let result = config.validate();
+        assert!(result.is_valid);
+        assert!(result.issues.is_empty());
+    }
+
+    #[test]
+    fn test_validate_multiple_issues() {
+        let mut config = Config::default();
+        config
+            .organizations
+            .insert("org1".to_string(), "bad_token1".to_string());
+        config
+            .organizations
+            .insert("org2".to_string(), "bad_token2".to_string());
+        config.default_org = Some("nonexistent".to_string());
+
+        let result = config.validate();
+        assert!(!result.is_valid);
+        // Should have warnings for both invalid tokens and error for invalid default
+        assert!(result.issues.len() >= 3);
+        assert!(result
+            .issues
+            .iter()
+            .any(|i| i.severity == ValidationSeverity::Error));
+    }
+
+    #[test]
+    fn test_mask_token_long() {
+        let token = "lin_api_abcdefghijklmnop";
+        let masked = Config::mask_token(token);
+        assert_eq!(masked, "lin_api_abcd...");
+    }
+
+    #[test]
+    fn test_mask_token_short() {
+        let token = "short";
+        let masked = Config::mask_token(token);
+        assert_eq!(masked, "*****");
+    }
+
+    #[test]
+    fn test_mask_token_exactly_12() {
+        let token = "lin_api_abcd";
+        let masked = Config::mask_token(token);
+        assert_eq!(masked, "************");
     }
 }

@@ -5,9 +5,10 @@
 
 use std::io::{self, BufRead, Write};
 
+use colored::Colorize;
 use serde::Serialize;
 
-use crate::config::Config;
+use crate::config::{Config, ConfigValidationIssue, ValidationSeverity};
 use crate::output::{output_success, HumanDisplay, OutputFormat};
 use crate::Result;
 
@@ -47,6 +48,38 @@ pub struct OrgSetDefaultResponse {
     pub organization: String,
 }
 
+/// Response for the config validate command.
+#[derive(Serialize)]
+pub struct ConfigValidateResponse {
+    pub is_valid: bool,
+    pub config_path: String,
+    pub issues: Vec<ValidationIssueResponse>,
+}
+
+/// A single validation issue in JSON-serializable format.
+#[derive(Serialize)]
+pub struct ValidationIssueResponse {
+    pub severity: String,
+    pub field: String,
+    pub message: String,
+}
+
+/// Response for the config show command.
+#[derive(Serialize)]
+pub struct ConfigShowResponse {
+    pub config_path: String,
+    pub organizations: Vec<OrgDetailInfo>,
+    pub default_org: Option<String>,
+}
+
+/// Detailed information about a configured organization.
+#[derive(Serialize)]
+pub struct OrgDetailInfo {
+    pub name: String,
+    pub token_masked: String,
+    pub is_default: bool,
+}
+
 impl HumanDisplay for OrgAddResponse {
     fn human_fmt(&self) -> String {
         self.message.clone()
@@ -82,6 +115,78 @@ impl HumanDisplay for OrgListResponse {
 impl HumanDisplay for OrgSetDefaultResponse {
     fn human_fmt(&self) -> String {
         self.message.clone()
+    }
+}
+
+impl HumanDisplay for ConfigValidateResponse {
+    fn human_fmt(&self) -> String {
+        let mut lines = Vec::new();
+
+        lines.push(format!("{}: {}", "Config path".dimmed(), self.config_path));
+
+        if self.is_valid && self.issues.is_empty() {
+            lines.push(format!("\n{} Configuration is valid.", "OK".green().bold()));
+        } else if self.is_valid {
+            lines.push(format!(
+                "\n{} Configuration is valid (with warnings).",
+                "OK".yellow().bold()
+            ));
+        } else {
+            lines.push(format!(
+                "\n{} Configuration has errors.",
+                "INVALID".red().bold()
+            ));
+        }
+
+        if !self.issues.is_empty() {
+            lines.push(format!("\n{}", "Issues found:".bold()));
+            for issue in &self.issues {
+                let severity_colored = match issue.severity.as_str() {
+                    "error" => "ERROR".red().bold().to_string(),
+                    "warning" => "WARNING".yellow().bold().to_string(),
+                    _ => issue.severity.clone(),
+                };
+                lines.push(format!(
+                    "  {} [{}]: {}",
+                    severity_colored, issue.field, issue.message
+                ));
+            }
+        }
+
+        lines.join("\n")
+    }
+}
+
+impl HumanDisplay for ConfigShowResponse {
+    fn human_fmt(&self) -> String {
+        let mut lines = Vec::new();
+
+        lines.push(format!("{}: {}", "Config path".dimmed(), self.config_path));
+
+        if self.organizations.is_empty() {
+            lines.push(format!("\n{}", "No organizations configured.".dimmed()));
+        } else {
+            lines.push(format!("\n{}", "Organizations:".bold()));
+            for org in &self.organizations {
+                let default_marker = if org.is_default {
+                    format!(" {}", "(default)".cyan())
+                } else {
+                    String::new()
+                };
+                lines.push(format!(
+                    "  {} {}{}",
+                    org.name.bold(),
+                    format!("[{}]", org.token_masked).dimmed(),
+                    default_marker
+                ));
+            }
+        }
+
+        if let Some(default) = &self.default_org {
+            lines.push(format!("\n{}: {}", "Default org".dimmed(), default));
+        }
+
+        lines.join("\n")
     }
 }
 
@@ -198,6 +303,95 @@ pub fn set_default_org(name: &str, format: OutputFormat) -> Result<()> {
 
     output_org(&response, format);
     Ok(())
+}
+
+/// Validate the configuration file.
+///
+/// Checks for:
+/// - Valid JSON syntax
+/// - Required fields present
+/// - API tokens have correct format (should start with `lin_api_`)
+/// - Default organization exists in the organizations list
+///
+/// # Arguments
+///
+/// * `format` - The output format (Human or Json)
+pub fn validate_config(format: OutputFormat) -> Result<()> {
+    let config_path = Config::config_path();
+    let config_path_str = config_path.display().to_string();
+
+    // Load and validate the file (checks JSON syntax)
+    let (config, mut file_issues) = Config::load_and_validate_file()?;
+
+    // Run validation on the loaded config
+    let validation_result = config.validate();
+
+    // Combine file issues with validation issues
+    let mut all_issues: Vec<ValidationIssueResponse> = file_issues
+        .drain(..)
+        .map(|issue| issue_to_response(&issue))
+        .collect();
+
+    all_issues.extend(validation_result.issues.iter().map(issue_to_response));
+
+    let is_valid = validation_result.is_valid
+        && !file_issues
+            .iter()
+            .any(|i| i.severity == ValidationSeverity::Error);
+
+    let response = ConfigValidateResponse {
+        is_valid,
+        config_path: config_path_str,
+        issues: all_issues,
+    };
+
+    output_org(&response, format);
+    Ok(())
+}
+
+/// Show the current configuration with masked tokens.
+///
+/// Displays configuration details including organizations and their
+/// tokens (partially masked for security).
+///
+/// # Arguments
+///
+/// * `format` - The output format (Human or Json)
+pub fn show_config(format: OutputFormat) -> Result<()> {
+    let config_path = Config::config_path();
+    let config_path_str = config_path.display().to_string();
+    let config = Config::load()?;
+
+    let organizations: Vec<OrgDetailInfo> = config
+        .organizations
+        .iter()
+        .map(|(name, token)| OrgDetailInfo {
+            name: name.clone(),
+            token_masked: Config::mask_token(token),
+            is_default: config.default_org.as_deref() == Some(name.as_str()),
+        })
+        .collect();
+
+    let response = ConfigShowResponse {
+        config_path: config_path_str,
+        organizations,
+        default_org: config.default_org.clone(),
+    };
+
+    output_org(&response, format);
+    Ok(())
+}
+
+/// Convert a ConfigValidationIssue to a ValidationIssueResponse.
+fn issue_to_response(issue: &ConfigValidationIssue) -> ValidationIssueResponse {
+    ValidationIssueResponse {
+        severity: match issue.severity {
+            ValidationSeverity::Error => "error".to_string(),
+            ValidationSeverity::Warning => "warning".to_string(),
+        },
+        field: issue.field.clone(),
+        message: issue.message.clone(),
+    }
 }
 
 /// Read the API token from stdin.
