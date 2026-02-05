@@ -4,6 +4,13 @@ version = "0.1.0"
 edition = "2021"
 description = "A command-line interface for Linear"
 license = "MIT"
+repository = "https://github.com/boyeln/lin"
+homepage = "https://github.com/boyeln/lin"
+readme = "README.md"
+keywords = ["linear", "cli", "issue-tracker", "productivity"]
+categories = ["command-line-utilities", "development-tools"]
+authors = ["Boye Lillejord-Nygård"]
+rust-version = "1.70"
 
 [dependencies]
 # CLI argument parsing
@@ -32,6 +39,9 @@ colored = "2"
 
 # TTY detection
 atty = "0.2"
+
+# Temporary directories (for self-update)
+tempfile = "3"
 
 [dev-dependencies]
 # HTTP mocking for tests

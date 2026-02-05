@@ -16,6 +16,7 @@ pub mod org;
 pub mod project;
 pub mod relation;
 pub mod search;
+pub mod self_update;
 pub mod team;
 pub mod user;
 pub mod workflow;
