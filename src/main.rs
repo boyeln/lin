@@ -7,8 +7,8 @@ use clap_complete::Shell;
 use lin::api::GraphQLClient;
 use lin::auth;
 use lin::commands::{
-    attachment, comment, completions, cycle, document, git, issue, label, project, relation,
-    resolvers, search, self_update, team, user, workflow,
+    attachment, comment, completions, cycle, git, issue, label, project, relation, resolvers,
+    search, self_update, team, user, workflow,
 };
 use lin::config::Config;
 use lin::error::LinError;
@@ -90,11 +90,6 @@ enum Commands {
     Label {
         #[command(subcommand)]
         command: LabelCommands,
-    },
-    /// Manage documents
-    Document {
-        #[command(subcommand)]
-        command: DocumentCommands,
     },
     /// Search for issues
     #[command(after_help = "EXAMPLES:\n  \
@@ -503,42 +498,6 @@ enum LabelCommands {
     },
 }
 
-/// Document-related subcommands.
-#[derive(Subcommand, Debug)]
-enum DocumentCommands {
-    /// List all documents
-    #[command(after_help = "EXAMPLES:\n  \
-    lin document list\n  \
-    lin document list --project <project-id>")]
-    List {
-        /// Filter by project ID (optional)
-        #[arg(long)]
-        project: Option<String>,
-    },
-    /// Get details of a specific document (including content)
-    #[command(after_help = "EXAMPLES:\n  \
-    lin document get <document-id>")]
-    Get {
-        /// Document ID
-        id: String,
-    },
-    /// Create a new document
-    #[command(after_help = "EXAMPLES:\n  \
-    lin document create --title \"My Doc\" --content \"# Hello\"\n  \
-    lin document create --title \"Project Doc\" --content \"Content\" --project <project-id>")]
-    Create {
-        /// Document title
-        #[arg(long)]
-        title: String,
-        /// Document content (markdown)
-        #[arg(long)]
-        content: String,
-        /// Project ID to associate the document with (optional)
-        #[arg(long)]
-        project: Option<String>,
-    },
-}
-
 /// User-related subcommands.
 #[derive(Subcommand, Debug)]
 enum UserCommands {
@@ -643,7 +602,6 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
                 Commands::Project { command } => handle_project_command(command, client, format),
                 Commands::Cycle { command } => handle_cycle_command(command, client, format),
                 Commands::Label { command } => handle_label_command(command, client, format),
-                Commands::Document { command } => handle_document_command(command, client, format),
                 Commands::Search {
                     query,
                     team,
@@ -1065,34 +1023,6 @@ fn handle_label_command(
             label::list_labels(&client, options, format)
         }
         LabelCommands::Get { id } => label::get_label(&client, &id, format),
-    }
-}
-
-fn handle_document_command(
-    command: DocumentCommands,
-    client: GraphQLClient,
-    format: OutputFormat,
-) -> lin::Result<()> {
-    match command {
-        DocumentCommands::List { project } => {
-            let options = document::DocumentListOptions {
-                project_id: project,
-            };
-            document::list_documents(&client, options, format)
-        }
-        DocumentCommands::Get { id } => document::get_document(&client, &id, format),
-        DocumentCommands::Create {
-            title,
-            content,
-            project,
-        } => {
-            let options = document::DocumentCreateOptions {
-                title,
-                content,
-                project_id: project,
-            };
-            document::create_document(&client, options, format)
-        }
     }
 }
 

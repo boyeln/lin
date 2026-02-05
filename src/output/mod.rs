@@ -5,7 +5,6 @@
 
 mod attachment;
 mod cycle;
-mod document;
 mod issue;
 mod label;
 mod project;
