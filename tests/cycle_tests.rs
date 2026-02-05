@@ -4,9 +4,9 @@
 
 mod common;
 
-use lin::api::queries::cycle::CYCLES_QUERY;
+use lin::api::queries::cycle::{CYCLE_QUERY, CYCLES_QUERY};
 use lin::api::queries::team::TEAMS_QUERY;
-use lin::models::{CyclesResponse, TeamsResponse};
+use lin::models::{CycleResponse, CyclesResponse, TeamsResponse};
 
 /// Test that we can list cycles for a team.
 ///
@@ -90,4 +90,74 @@ fn test_cycles_nonexistent_team() {
 
     let err = result.unwrap_err();
     println!("Expected error for non-existent team: {}", err);
+}
+
+/// Test getting a specific cycle by ID.
+///
+/// This test verifies:
+/// 1. Listing cycles to get a valid cycle ID
+/// 2. Getting the cycle by its ID (with issues)
+/// 3. Verifying the cycle data matches
+#[test]
+#[ignore]
+fn test_cycle_get() {
+    let client = common::create_client();
+
+    // First, get a team
+    let teams_response: TeamsResponse = client
+        .query(TEAMS_QUERY, serde_json::json!({"first": 1}))
+        .expect("Should be able to list teams");
+
+    assert!(
+        !teams_response.teams.nodes.is_empty(),
+        "Should have at least one team"
+    );
+
+    let team = &teams_response.teams.nodes[0];
+
+    // List cycles for the team
+    let cycles_response: CyclesResponse = client
+        .query(CYCLES_QUERY, serde_json::json!({"teamId": &team.id}))
+        .expect("Should be able to list cycles");
+
+    // Skip if no cycles exist
+    if cycles_response.team.cycles.nodes.is_empty() {
+        println!("No cycles found for team {}, skipping get test", team.name);
+        return;
+    }
+
+    let first_cycle = &cycles_response.team.cycles.nodes[0];
+    let cycle_id = &first_cycle.id;
+
+    println!(
+        "Testing get for cycle {} (ID: {})",
+        first_cycle
+            .name
+            .as_ref()
+            .map(|n| n.as_str())
+            .unwrap_or(&format!("Cycle {}", first_cycle.number)),
+        cycle_id
+    );
+
+    // Get the cycle by ID
+    let variables = serde_json::json!({
+        "id": cycle_id
+    });
+
+    let response: CycleResponse = client
+        .query(CYCLE_QUERY, variables)
+        .expect("Should be able to get cycle by ID");
+
+    // Verify the cycle data matches
+    assert_eq!(response.cycle.id, *cycle_id, "Cycle ID should match");
+    assert_eq!(
+        response.cycle.number, first_cycle.number,
+        "Cycle number should match"
+    );
+
+    println!(
+        "Successfully retrieved cycle {} with {} issue(s)",
+        response.cycle.number,
+        response.cycle.issues.nodes.len()
+    );
 }

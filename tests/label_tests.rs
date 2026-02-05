@@ -4,8 +4,8 @@
 
 mod common;
 
-use lin::api::queries::label::LABELS_QUERY;
-use lin::models::LabelsResponse;
+use lin::api::queries::label::{LABEL_QUERY, LABELS_QUERY};
+use lin::models::{LabelResponse, LabelsResponse};
 
 /// Test that we can list labels in the workspace.
 ///
@@ -45,4 +45,54 @@ fn test_label_list() {
             first_label.name, first_label.color
         );
     }
+}
+
+/// Test getting a specific label by ID.
+///
+/// This test verifies:
+/// 1. Listing labels to get a valid label ID
+/// 2. Getting the label by its ID
+/// 3. Verifying the label data matches
+#[test]
+#[ignore]
+fn test_label_get() {
+    let client = common::create_client();
+
+    // First, list labels to get a valid label ID
+    let labels_response: LabelsResponse = client
+        .query(LABELS_QUERY, serde_json::json!({}))
+        .expect("Should be able to list labels");
+
+    // Skip if no labels exist
+    if labels_response.issue_labels.nodes.is_empty() {
+        println!("No labels found in workspace, skipping get test");
+        return;
+    }
+
+    let first_label = &labels_response.issue_labels.nodes[0];
+    let label_id = &first_label.id;
+
+    println!("Testing get for label: {} ({})", first_label.name, label_id);
+
+    // Get the label by ID
+    let variables = serde_json::json!({
+        "id": label_id
+    });
+
+    let response: LabelResponse = client
+        .query(LABEL_QUERY, variables)
+        .expect("Should be able to get label by ID");
+
+    // Verify the label data matches
+    assert_eq!(response.issue_label.id, *label_id, "Label ID should match");
+    assert_eq!(
+        response.issue_label.name, first_label.name,
+        "Label name should match"
+    );
+    assert_eq!(
+        response.issue_label.color, first_label.color,
+        "Label color should match"
+    );
+
+    println!("Successfully retrieved label: {}", response.issue_label.name);
 }
