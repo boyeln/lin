@@ -83,8 +83,10 @@ fn test_search_issues() {
         println!("Searching for: {}", unique_keyword);
 
         let search_variables = serde_json::json!({
-            "query": &unique_keyword,
-            "first": 10
+            "first": 10,
+            "filter": {
+                "searchableContent": { "contains": &unique_keyword }
+            }
         });
 
         let search_response: IssueSearchResponse = client
@@ -93,12 +95,12 @@ fn test_search_issues() {
 
         println!(
             "Search returned {} result(s)",
-            search_response.issue_search.nodes.len()
+            search_response.issues.nodes.len()
         );
 
         // The search should find our issue
         let found = search_response
-            .issue_search
+            .issues
             .nodes
             .iter()
             .any(|issue| issue.id == issue_id);

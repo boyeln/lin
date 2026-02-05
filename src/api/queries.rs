@@ -963,17 +963,16 @@ query IssueGitLinks($id: String!) {
 }
 "#;
 
-/// Query to search issues by full-text search.
+/// Query to search issues using the issues query with searchableContent filter.
 ///
 /// Variables:
-/// - `query` (String!): The search query string
 /// - `first` (Int, optional): Number of issues to fetch (default: 50)
-/// - `filter` (IssueFilter, optional): Additional filters to apply
+/// - `filter` (IssueFilter, optional): Filters including searchableContent for text search
 ///
 /// Returns: `IssueSearchResponse`
 pub const ISSUE_SEARCH_QUERY: &str = r#"
-query IssueSearch($query: String!, $first: Int, $filter: IssueFilter) {
-    issueSearch(query: $query, first: $first, filter: $filter) {
+query IssueSearch($first: Int, $filter: IssueFilter) {
+    issues(first: $first, filter: $filter) {
         nodes {
             id
             identifier
@@ -1417,10 +1416,9 @@ mod tests {
     #[test]
     fn test_issue_search_query_is_valid() {
         assert!(ISSUE_SEARCH_QUERY.contains("query IssueSearch"));
-        assert!(ISSUE_SEARCH_QUERY.contains("$query: String!"));
         assert!(ISSUE_SEARCH_QUERY.contains("$first: Int"));
         assert!(ISSUE_SEARCH_QUERY.contains("$filter: IssueFilter"));
-        assert!(ISSUE_SEARCH_QUERY.contains("issueSearch"));
+        assert!(ISSUE_SEARCH_QUERY.contains("issues(first: $first, filter: $filter)"));
         assert!(ISSUE_SEARCH_QUERY.contains("nodes"));
         assert!(ISSUE_SEARCH_QUERY.contains("identifier"));
         assert!(ISSUE_SEARCH_QUERY.contains("state"));
