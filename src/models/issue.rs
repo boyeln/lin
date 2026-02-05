@@ -25,6 +25,8 @@ pub struct Issue {
     pub description: Option<String>,
     /// Priority level (0 = no priority, 1 = urgent, 2 = high, 3 = normal, 4 = low).
     pub priority: i32,
+    /// Estimate value (story points or t-shirt size value).
+    pub estimate: Option<f64>,
     /// Current workflow state.
     pub state: Option<WorkflowState>,
     /// Team the issue belongs to.
@@ -59,6 +61,8 @@ pub struct IssueWithComments {
     pub description: Option<String>,
     /// Priority level (0 = no priority, 1 = urgent, 2 = high, 3 = normal, 4 = low).
     pub priority: i32,
+    /// Estimate value (story points or t-shirt size value).
+    pub estimate: Option<f64>,
     /// Current workflow state.
     pub state: Option<WorkflowState>,
     /// Team the issue belongs to.
@@ -283,6 +287,7 @@ mod tests {
             "title": "Fix the bug",
             "description": "This is a bug description",
             "priority": 2,
+            "estimate": 5.0,
             "state": {
                 "id": "state-1",
                 "name": "In Progress",
@@ -310,6 +315,7 @@ mod tests {
         assert_eq!(issue.identifier, "ENG-123");
         assert_eq!(issue.title, "Fix the bug");
         assert_eq!(issue.priority, 2);
+        assert_eq!(issue.estimate, Some(5.0));
         assert!(issue.state.is_some());
         assert!(issue.team.is_some());
         assert!(issue.assignee.is_some());
@@ -323,6 +329,7 @@ mod tests {
             "title": "Fix the bug",
             "description": null,
             "priority": 0,
+            "estimate": null,
             "state": null,
             "team": null,
             "assignee": null,
@@ -331,6 +338,7 @@ mod tests {
         }"#;
         let issue: Issue = serde_json::from_str(json).unwrap();
         assert!(issue.description.is_none());
+        assert!(issue.estimate.is_none());
         assert!(issue.state.is_none());
         assert!(issue.team.is_none());
         assert!(issue.assignee.is_none());
@@ -346,6 +354,7 @@ mod tests {
                     "title": "Issue 1",
                     "description": null,
                     "priority": 1,
+                    "estimate": null,
                     "state": null,
                     "team": null,
                     "assignee": null,
@@ -358,6 +367,7 @@ mod tests {
                     "title": "Issue 2",
                     "description": null,
                     "priority": 2,
+                    "estimate": null,
                     "state": null,
                     "team": null,
                     "assignee": null,
@@ -383,6 +393,7 @@ mod tests {
                     "title": "New Issue",
                     "description": null,
                     "priority": 0,
+                    "estimate": null,
                     "state": null,
                     "team": null,
                     "assignee": null,
@@ -408,6 +419,7 @@ mod tests {
                     "title": "Updated Title",
                     "description": null,
                     "priority": 1,
+                    "estimate": null,
                     "state": null,
                     "team": null,
                     "assignee": null,
@@ -432,6 +444,7 @@ mod tests {
                         "title": "Search result issue",
                         "description": "Found via search",
                         "priority": 2,
+                        "estimate": null,
                         "state": null,
                         "team": null,
                         "assignee": null,
