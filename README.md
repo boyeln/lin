@@ -36,12 +36,116 @@ To set up authentication:
 # Using environment variable
 export LINEAR_API_TOKEN="lin_api_..."
 
-# Or add an organization via CLI (reads token from stdin)
-echo "lin_api_..." | lin org add my-org
+# Or add a token via CLI
+lin config set token lin_api_...
 
-# Set a default organization
-lin org set-default my-org
+# For multiple organizations
+lin config set token lin_api_... --org my-org
+lin config set default-org my-org
 ```
+
+## Configuration Management
+
+The `lin config` command provides a git-style interface for managing all configuration, with support for both global and project-local configs.
+
+### Configuration Hierarchy
+
+lin supports two levels of configuration:
+
+1. **Global config**: `~/.config/lin/config.json` (or OS-equivalent)
+2. **Local config**: `.lin/config.json` in your project directory
+
+Local config takes precedence over global config. Settings are merged, with local values overriding global ones for the same organization.
+
+### Basic Configuration
+
+```bash
+# Set a token (creates default organization)
+lin config set token lin_api_...
+
+# Get the current token (masked)
+lin config get token
+
+# List all configuration
+lin config list
+
+# Show where each setting comes from
+lin config list --show-origin
+
+# Validate configuration file
+lin config validate
+```
+
+### Local vs Global Config
+
+```bash
+# Set token in global config (available everywhere)
+lin config set token lin_api_xxx --global
+
+# Set token in local config (project-specific)
+# First create .lin directory or use --local flag
+mkdir .lin
+lin config set token lin_api_yyy --local
+
+# Without --global or --local:
+# - Uses local config if .lin/ exists
+# - Falls back to global config otherwise
+lin config set token lin_api_zzz
+```
+
+### Multi-Organization Setup
+
+```bash
+# Add tokens for multiple organizations
+lin config set token lin_api_xxx --org work
+lin config set token lin_api_yyy --org personal
+
+# Set default organization
+lin config set default-org work
+
+# Get default organization
+lin config get default-org
+
+# Get token for specific org
+lin config get token --org personal
+
+# List specific organization
+lin config list --org work
+```
+
+### Removing Configuration
+
+```bash
+# Remove a token (removes the entire organization)
+lin config unset token --org personal
+
+# Remove from specific config
+lin config unset token --org work --global
+lin config unset token --org personal --local
+
+# Clear default organization (keeps orgs)
+lin config unset default-org
+```
+
+### JSON Output
+
+Use `--json` for machine-readable output:
+
+```bash
+# Get full token in JSON (not masked)
+lin config get token --json
+
+# List all config in JSON
+lin config list --json
+```
+
+### Use Cases for Local Config
+
+Local config is useful for:
+- **Multi-team projects**: Different Linear workspaces per project
+- **Client work**: Separate tokens per client project
+- **Testing**: Use test workspace tokens without affecting global config
+- **Team settings**: Check in `.lin/config.json` (without tokens) for team defaults
 
 ## Usage
 
@@ -61,7 +165,7 @@ Run `lin --help` for full documentation. Each subcommand also supports `--help` 
 | `lin document` | List, get, and create documents |
 | `lin attachment` | List, get, and upload attachments |
 | `lin search` | Full-text search for issues |
-| `lin org` | Manage organizations and config |
+| `lin config` | Manage configuration (tokens, orgs) |
 | `lin cache` | View cache status or clear cache |
 | `lin completions` | Generate shell completions |
 
