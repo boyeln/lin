@@ -85,7 +85,7 @@ pub fn require_api_token(
             "No API token found. Provide a token using one of these methods:\n\
              1. Use --api-token flag: lin --api-token <token> <command>\n\
              2. Set LINEAR_API_TOKEN environment variable\n\
-             3. Add an organization: lin org add <name>",
+             3. Add a token: lin config set token <value>",
         )
     })
 }
@@ -165,7 +165,7 @@ mod tests {
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("--api-token"));
         assert!(err_msg.contains("LINEAR_API_TOKEN"));
-        assert!(err_msg.contains("lin org add"));
+        assert!(err_msg.contains("lin config set token"));
     }
 
     #[test]
