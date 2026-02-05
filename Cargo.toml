@@ -49,5 +49,5 @@ chrono = { version = "0.4", features = ["serde"] }
 [dev-dependencies]
 # HTTP mocking for tests
 mockito = "1"
-# Temporary directories for cache tests
+# Temporary directories (for tests and self-update)
 tempfile = "3"
