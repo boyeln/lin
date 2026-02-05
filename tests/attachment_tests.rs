@@ -120,7 +120,11 @@ fn test_attachment_upload_and_get() {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs();
-    let issue_title = format!("{} Attachment Test {}", common::TEST_ISSUE_PREFIX, timestamp);
+    let issue_title = format!(
+        "{} Attachment Test {}",
+        common::TEST_ISSUE_PREFIX,
+        timestamp
+    );
 
     // --- Step 1: Create Issue ---
     println!("Creating issue: {}", issue_title);
@@ -231,11 +235,10 @@ fn test_attachment_upload_and_get() {
 
         if !upload_result.status().is_success() {
             let status = upload_result.status();
-            let body = upload_result.text().unwrap_or_else(|_| "Unable to read body".to_string());
-            panic!(
-                "File upload failed with status {}: {}",
-                status, body
-            );
+            let body = upload_result
+                .text()
+                .unwrap_or_else(|_| "Unable to read body".to_string());
+            panic!("File upload failed with status {}: {}", status, body);
         }
 
         println!("File uploaded successfully");

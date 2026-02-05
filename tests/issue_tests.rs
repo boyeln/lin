@@ -489,7 +489,9 @@ fn test_issue_list_with_priority_filter() {
     for priority in &priorities {
         let title = format!(
             "{} Priority {} Test {}",
-            common::TEST_ISSUE_PREFIX, priority, timestamp
+            common::TEST_ISSUE_PREFIX,
+            priority,
+            timestamp
         );
 
         let create_variables = serde_json::json!({
@@ -506,7 +508,10 @@ fn test_issue_list_with_priority_filter() {
 
         if let Some(issue) = create_response.issue_create.issue {
             created_issue_ids.push(issue.id.clone());
-            println!("Created issue with priority {}: {}", priority, issue.identifier);
+            println!(
+                "Created issue with priority {}: {}",
+                priority, issue.identifier
+            );
         }
     }
 

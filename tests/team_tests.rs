@@ -82,7 +82,10 @@ fn test_team_get() {
 
     // Verify the team data matches
     assert_eq!(response.team.id, *team_id, "Team ID should match");
-    assert_eq!(response.team.name, first_team.name, "Team name should match");
+    assert_eq!(
+        response.team.name, first_team.name,
+        "Team name should match"
+    );
     assert_eq!(response.team.key, first_team.key, "Team key should match");
 
     println!("Successfully retrieved team: {}", response.team.name);
