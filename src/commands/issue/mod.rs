@@ -173,6 +173,8 @@ pub struct IssueCreateOptions {
     pub state_id: Option<String>,
     /// Priority level (0=none, 1=urgent, 2=high, 3=normal, 4=low).
     pub priority: Option<i32>,
+    /// Estimate (e.g., story points).
+    pub estimate: Option<f64>,
     /// Label IDs to add to the issue.
     pub label_ids: Option<Vec<String>>,
     /// Project ID to assign the issue to.
@@ -192,6 +194,8 @@ pub struct IssueUpdateOptions {
     pub state_id: Option<String>,
     /// New priority level (0=none, 1=urgent, 2=high, 3=normal, 4=low).
     pub priority: Option<i32>,
+    /// Estimate (e.g., story points).
+    pub estimate: Option<f64>,
     /// Label IDs to set on the issue (replaces existing labels).
     pub label_ids: Option<Vec<String>>,
     /// Project ID to assign the issue to.

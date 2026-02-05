@@ -35,6 +35,10 @@ impl HumanDisplay for Issue {
             parts.push(format!("  {}: {}", "Priority".dimmed(), p));
         }
 
+        if let Some(estimate) = self.estimate {
+            parts.push(format!("  {}: {}", "Estimate".dimmed(), estimate));
+        }
+
         if let Some(assignee) = &self.assignee {
             parts.push(format!("  {}: {}", "Assignee".dimmed(), assignee.name));
         }
@@ -102,6 +106,10 @@ impl HumanDisplay for IssueWithComments {
         };
         if let Some(p) = priority_colored {
             parts.push(format!("  {}: {}", "Priority".dimmed(), p));
+        }
+
+        if let Some(estimate) = self.estimate {
+            parts.push(format!("  {}: {}", "Estimate".dimmed(), estimate));
         }
 
         if let Some(assignee) = &self.assignee {
@@ -193,6 +201,7 @@ mod tests {
             title: "Fix the bug".to_string(),
             description: None,
             priority: 2,
+            estimate: None,
             state: Some(WorkflowState {
                 id: "state-1".to_string(),
                 name: "In Progress".to_string(),

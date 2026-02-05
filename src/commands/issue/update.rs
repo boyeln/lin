@@ -97,6 +97,10 @@ pub fn update_issue(
         input.insert("priority".to_string(), serde_json::json!(priority));
     }
 
+    if let Some(estimate) = options.estimate {
+        input.insert("estimate".to_string(), serde_json::json!(estimate));
+    }
+
     if let Some(label_ids) = options.label_ids {
         input.insert("labelIds".to_string(), serde_json::json!(label_ids));
     }
@@ -182,6 +186,7 @@ mod tests {
             assignee_id: None,
             state_id: Some("state-2".to_string()),
             priority: Some(1),
+            estimate: None,
             label_ids: None,
             project_id: None,
         };
@@ -397,6 +402,7 @@ mod tests {
             assignee_id: None,
             state_id: None,
             priority: Some(3),
+            estimate: None,
             label_ids: None,
             project_id: None,
         };

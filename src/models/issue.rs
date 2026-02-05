@@ -35,6 +35,8 @@ pub struct Issue {
     pub created_at: String,
     /// ISO 8601 timestamp of when the issue was last updated.
     pub updated_at: String,
+    /// Estimate of the issue (e.g., story points).
+    pub estimate: Option<f64>,
 }
 
 /// A paginated list of issues.
@@ -69,6 +71,8 @@ pub struct IssueWithComments {
     pub created_at: String,
     /// ISO 8601 timestamp of when the issue was last updated.
     pub updated_at: String,
+    /// Estimate of the issue (e.g., story points).
+    pub estimate: Option<f64>,
     /// Comments on the issue.
     pub comments: CommentConnection,
 }

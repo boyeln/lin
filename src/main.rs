@@ -248,6 +248,9 @@ enum IssueCommands {
         /// Priority (0-4: 0=none, 1=urgent, 2=high, 3=normal, 4=low)
         #[arg(long)]
         priority: Option<u8>,
+        /// Estimate points (e.g., story points)
+        #[arg(long)]
+        estimate: Option<f64>,
         /// Label IDs to add to the issue (can be specified multiple times)
         #[arg(long)]
         labels: Option<Vec<String>>,
@@ -279,6 +282,9 @@ enum IssueCommands {
         /// New priority (0-4: 0=none, 1=urgent, 2=high, 3=normal, 4=low)
         #[arg(long)]
         priority: Option<u8>,
+        /// Estimate points (e.g., story points)
+        #[arg(long)]
+        estimate: Option<f64>,
         /// Label IDs to set on the issue (replaces existing labels, can be specified multiple times)
         #[arg(long)]
         labels: Option<Vec<String>>,
@@ -818,6 +824,7 @@ fn handle_issue_command(
             assignee,
             state,
             priority,
+            estimate,
             labels,
             project,
         } => {
@@ -828,6 +835,7 @@ fn handle_issue_command(
                 assignee_id: assignee,
                 state_id: state,
                 priority: priority.map(|p| p as i32),
+                estimate,
                 label_ids: labels,
                 project_id: project,
             };
@@ -840,6 +848,7 @@ fn handle_issue_command(
             assignee,
             state,
             priority,
+            estimate,
             labels,
             project,
         } => {
@@ -849,6 +858,7 @@ fn handle_issue_command(
                 assignee_id: assignee,
                 state_id: state,
                 priority: priority.map(|p| p as i32),
+                estimate,
                 label_ids: labels,
                 project_id: project,
             };

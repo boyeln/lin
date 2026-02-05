@@ -18,6 +18,7 @@ query Issues($first: Int, $filter: IssueFilter, $orderBy: PaginationOrderBy) {
             title
             description
             priority
+            estimate
             createdAt
             updatedAt
             state {
@@ -58,6 +59,7 @@ query Issue($id: String!) {
         title
         description
         priority
+        estimate
         createdAt
         updatedAt
         state {
@@ -101,6 +103,7 @@ query IssueByIdentifier($filter: IssueFilter!) {
             title
             description
             priority
+            estimate
             createdAt
             updatedAt
             state {
@@ -135,6 +138,7 @@ query IssueByIdentifier($filter: IssueFilter!) {
 ///   - `teamId` (String!): Team ID
 ///   - `description` (String, optional): Issue description
 ///   - `priority` (Int, optional): Priority (0-4)
+///   - `estimate` (Float, optional): Estimate (e.g., story points)
 ///   - `assigneeId` (String, optional): Assignee user ID
 ///   - `stateId` (String, optional): Initial state ID
 ///   - `projectId` (String, optional): Project ID
@@ -150,6 +154,7 @@ mutation IssueCreate($input: IssueCreateInput!) {
             title
             description
             priority
+            estimate
             createdAt
             updatedAt
             state {
@@ -184,6 +189,7 @@ mutation IssueCreate($input: IssueCreateInput!) {
 ///   - `title` (String, optional): New title
 ///   - `description` (String, optional): New description
 ///   - `priority` (Int, optional): New priority (0-4)
+///   - `estimate` (Float, optional): New estimate (e.g., story points)
 ///   - `assigneeId` (String, optional): New assignee user ID
 ///   - `stateId` (String, optional): New state ID
 ///   - `projectId` (String, optional): New project ID
@@ -199,6 +205,7 @@ mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
             title
             description
             priority
+            estimate
             createdAt
             updatedAt
             state {
@@ -281,6 +288,7 @@ query IssueWithComments($id: String!) {
         title
         description
         priority
+        estimate
         createdAt
         updatedAt
         state {
@@ -336,6 +344,7 @@ query IssueByIdentifierWithComments($filter: IssueFilter!) {
             title
             description
             priority
+            estimate
             createdAt
             updatedAt
             state {
