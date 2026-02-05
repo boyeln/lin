@@ -4,10 +4,10 @@
 //! separated from the argument parsing in main.rs.
 
 pub mod attachment;
+pub mod auth;
 pub mod cache;
 pub mod comment;
 pub mod completions;
-pub mod config;
 pub mod cycle;
 pub mod document;
 pub mod git;
@@ -15,6 +15,7 @@ pub mod issue;
 pub mod label;
 pub mod project;
 pub mod relation;
+pub mod resolvers;
 pub mod search;
 pub mod self_update;
 pub mod team;
