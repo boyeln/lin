@@ -5,6 +5,7 @@
 use crate::Result;
 use crate::api::GraphQLClient;
 use crate::api::queries::project::{PROJECT_QUERY, PROJECTS_QUERY};
+use crate::config::Config;
 use crate::models::{ProjectResponse, ProjectsResponse};
 use crate::output::{OutputFormat, output};
 
@@ -17,7 +18,7 @@ pub struct ProjectListOptions {
 
 /// List all projects in the organization.
 ///
-/// Fetches projects from the Linear API and outputs them.
+/// Fetches projects from the Linear API, caches their slugs, and outputs them.
 ///
 /// # Arguments
 ///
@@ -59,18 +60,33 @@ pub fn list_projects(
 
     let response: ProjectsResponse =
         client.query(PROJECTS_QUERY, serde_json::Value::Object(variables))?;
+
+    // Cache project slugs (ignore errors if config not available)
+    let projects_for_cache: Vec<(String, String)> = response
+        .projects
+        .nodes
+        .iter()
+        .map(|p| (p.id.clone(), p.name.clone()))
+        .collect();
+
+    if let Ok(mut config) = Config::load() {
+        let _ = config.cache_projects(projects_for_cache);
+        let _ = config.save();
+    }
+
     output(&response.projects.nodes, format);
     Ok(())
 }
 
-/// Get details of a specific project by ID.
+/// Get details of a specific project by slug or ID.
 ///
 /// Fetches a single project from the Linear API and outputs it.
+/// Accepts either a project slug (e.g., "q1-backend") or UUID.
 ///
 /// # Arguments
 ///
 /// * `client` - The GraphQL client to use for the API request
-/// * `id` - The project's unique identifier
+/// * `slug_or_id` - The project's slug or unique identifier
 /// * `format` - The output format (Human or Json)
 ///
 /// # Example
@@ -82,15 +98,31 @@ pub fn list_projects(
 /// use lin::output::OutputFormat;
 ///
 /// let client = GraphQLClient::new("lin_api_xxxxx");
-/// get_project(&client, "project-123", OutputFormat::Human)?;
+/// get_project(&client, "q1-backend", OutputFormat::Human)?;
 /// # Ok(())
 /// # }
 /// ```
-pub fn get_project(client: &GraphQLClient, id: &str, format: OutputFormat) -> Result<()> {
+pub fn get_project(client: &GraphQLClient, slug_or_id: &str, format: OutputFormat) -> Result<()> {
+    // Resolve slug to UUID if needed (ignore errors if config not available)
+    let project_id = Config::load()
+        .ok()
+        .and_then(|config| config.get_project_id(slug_or_id))
+        .unwrap_or_else(|| slug_or_id.to_string());
+
     let variables = serde_json::json!({
-        "id": id
+        "id": project_id
     });
     let response: ProjectResponse = client.query(PROJECT_QUERY, variables)?;
+
+    // Cache this project for future slug lookups (ignore errors if config not available)
+    if let Ok(mut config) = Config::load() {
+        let _ = config.cache_projects(vec![(
+            response.project.id.clone(),
+            response.project.name.clone(),
+        )]);
+        let _ = config.save();
+    }
+
     output(&response.project, format);
     Ok(())
 }
