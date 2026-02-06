@@ -9,6 +9,9 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 use crate::Result;
 use crate::error::LinError;
 
@@ -65,16 +68,31 @@ pub struct CachedTeam {
 impl Config {
     /// Returns the path to the global configuration file.
     ///
-    /// The config file is stored at `~/.config/lin/config.json` on Unix systems
-    /// or the equivalent XDG config directory on other platforms.
+    /// The config file is stored at `~/.config/lin/config.json` on all platforms.
+    /// This provides consistency across Unix-like systems and follows CLI tool conventions.
     pub fn config_path() -> PathBuf {
-        let config_dir = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-        config_dir.join("lin").join("config.json")
+        let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+        home_dir.join(".config").join("lin").join("config.json")
+    }
+
+    /// Returns the legacy config path (macOS only).
+    ///
+    /// On macOS, configs were previously stored in `~/Library/Application Support/lin/config.json`.
+    /// This is used for automatic migration to the new location.
+    #[cfg(target_os = "macos")]
+    fn legacy_config_path() -> PathBuf {
+        let home_dir = dirs::home_dir().unwrap_or_else(|| PathBuf::from("."));
+        home_dir
+            .join("Library")
+            .join("Application Support")
+            .join("lin")
+            .join("config.json")
     }
 
     /// Load configuration from the config file.
     ///
     /// If the config file doesn't exist, returns a default empty configuration.
+    /// On macOS, automatically migrates from legacy location if found.
     ///
     /// # Errors
     ///
@@ -82,20 +100,41 @@ impl Config {
     pub fn load() -> Result<Self> {
         let path = Self::config_path();
 
-        if !path.exists() {
-            return Ok(Config::default());
+        // Check if config exists at new location
+        if path.exists() {
+            let contents = fs::read_to_string(&path)?;
+            let config: Config = serde_json::from_str(&contents)
+                .map_err(|e| LinError::parse(format!("Failed to parse config file: {}", e)))?;
+            return Ok(config);
         }
 
-        let contents = fs::read_to_string(&path)?;
-        let config: Config = serde_json::from_str(&contents)
-            .map_err(|e| LinError::parse(format!("Failed to parse config file: {}", e)))?;
+        // On macOS, check legacy location and migrate if found
+        #[cfg(target_os = "macos")]
+        {
+            let legacy_path = Self::legacy_config_path();
+            if legacy_path.exists() {
+                // Read from legacy location
+                let contents = fs::read_to_string(&legacy_path)?;
+                let config: Config = serde_json::from_str(&contents)
+                    .map_err(|e| LinError::parse(format!("Failed to parse config file: {}", e)))?;
 
-        Ok(config)
+                // Save to new location (this will set proper permissions)
+                config.save()?;
+
+                // Remove legacy file
+                let _ = fs::remove_file(&legacy_path);
+
+                return Ok(config);
+            }
+        }
+
+        Ok(Config::default())
     }
 
     /// Save the configuration to the config file.
     ///
     /// Creates the config directory and any parent directories if they don't exist.
+    /// On Unix systems, sets file permissions to 600 (owner read/write only) to protect API tokens.
     ///
     /// # Errors
     ///
@@ -112,6 +151,17 @@ impl Config {
             .map_err(|e| LinError::parse(format!("Failed to serialize config: {}", e)))?;
 
         fs::write(&path, contents)?;
+
+        // Set file permissions to 600 (owner read/write only) on Unix systems
+        // This protects API tokens from being readable by other users
+        #[cfg(unix)]
+        {
+            let metadata = fs::metadata(&path)?;
+            let mut permissions = metadata.permissions();
+            permissions.set_mode(0o600);
+            fs::set_permissions(&path, permissions)?;
+        }
+
         Ok(())
     }
 
