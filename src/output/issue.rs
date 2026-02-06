@@ -47,6 +47,15 @@ impl HumanDisplay for Issue {
             parts.push(format!("  {}: {}", "Team".dimmed(), team.name));
         }
 
+        if let Some(milestone) = &self.project_milestone {
+            let milestone_text = if let Some(target_date) = &milestone.target_date {
+                format!("{} ({})", milestone.name, target_date)
+            } else {
+                milestone.name.clone()
+            };
+            parts.push(format!("  {}: {}", "Milestone".dimmed(), milestone_text));
+        }
+
         parts.join("\n")
     }
 }
@@ -118,6 +127,15 @@ impl HumanDisplay for IssueWithComments {
 
         if let Some(team) = &self.team {
             parts.push(format!("  {}: {}", "Team".dimmed(), team.name));
+        }
+
+        if let Some(milestone) = &self.project_milestone {
+            let milestone_text = if let Some(target_date) = &milestone.target_date {
+                format!("{} ({})", milestone.name, target_date)
+            } else {
+                milestone.name.clone()
+            };
+            parts.push(format!("  {}: {}", "Milestone".dimmed(), milestone_text));
         }
 
         // Add comments section
@@ -210,6 +228,7 @@ mod tests {
             }),
             team: None,
             assignee: None,
+            project_milestone: None,
             created_at: "2024-01-01".to_string(),
             updated_at: "2024-01-02".to_string(),
         };
