@@ -351,6 +351,70 @@ fn query_workflow_states(
     Ok(states_response.team.states.nodes)
 }
 
+/// Resolve a milestone name or UUID to a milestone UUID.
+///
+/// Requires project context since milestones are project-specific.
+///
+/// # Arguments
+///
+/// * `client` - GraphQL client for API queries
+/// * `milestone_name_or_id` - Milestone name (e.g., "Sprint 1") or UUID
+/// * `project_id` - Project UUID for context
+///
+/// # Returns
+///
+/// The milestone UUID.
+pub fn resolve_milestone_id(
+    client: &GraphQLClient,
+    milestone_name_or_id: &str,
+    project_id: &str,
+) -> Result<String> {
+    // 1. UUID passthrough
+    if is_uuid(milestone_name_or_id) {
+        return Ok(milestone_name_or_id.to_string());
+    }
+
+    // 2. Query milestones for the project
+    let response: crate::models::ProjectMilestonesResponse = client.query(
+        queries::milestone::PROJECT_MILESTONES_QUERY,
+        serde_json::json!({
+            "projectId": project_id,
+            "first": 100
+        }),
+    )?;
+
+    // 3. Find milestone by name (case-insensitive)
+    let milestone_lower = milestone_name_or_id.to_lowercase();
+    match response
+        .project_milestones
+        .nodes
+        .iter()
+        .find(|m| m.name.to_lowercase() == milestone_lower)
+    {
+        Some(milestone) => Ok(milestone.id.clone()),
+        None => {
+            let available: Vec<_> = response
+                .project_milestones
+                .nodes
+                .iter()
+                .map(|m| m.name.as_str())
+                .collect();
+            if available.is_empty() {
+                Err(LinError::api(format!(
+                    "No milestones found for project '{}'",
+                    project_id
+                )))
+            } else {
+                Err(LinError::api(format!(
+                    "Milestone '{}' not found. Available milestones: {}",
+                    milestone_name_or_id,
+                    available.join(", ")
+                )))
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
