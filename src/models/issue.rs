@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use super::attachment::AttachmentConnection;
 use super::comment::CommentConnection;
+use super::milestone::ProjectMilestone;
 use super::team::Team;
 use super::user::User;
 use super::workflow::WorkflowState;
@@ -33,6 +34,8 @@ pub struct Issue {
     pub team: Option<Team>,
     /// User assigned to the issue.
     pub assignee: Option<User>,
+    /// Project milestone the issue belongs to.
+    pub project_milestone: Option<ProjectMilestone>,
     /// ISO 8601 timestamp of when the issue was created.
     pub created_at: String,
     /// ISO 8601 timestamp of when the issue was last updated.
@@ -69,6 +72,8 @@ pub struct IssueWithComments {
     pub team: Option<Team>,
     /// User assigned to the issue.
     pub assignee: Option<User>,
+    /// Project milestone the issue belongs to.
+    pub project_milestone: Option<ProjectMilestone>,
     /// ISO 8601 timestamp of when the issue was created.
     pub created_at: String,
     /// ISO 8601 timestamp of when the issue was last updated.
