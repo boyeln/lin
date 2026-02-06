@@ -5,6 +5,7 @@
 
 use std::collections::HashMap;
 use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
@@ -135,6 +136,7 @@ impl Config {
     ///
     /// Creates the config directory and any parent directories if they don't exist.
     /// On Unix systems, sets file permissions to 600 (owner read/write only) to protect API tokens.
+    /// Uses atomic writes (write to temp file, then rename) to prevent corruption.
     ///
     /// # Errors
     ///
@@ -150,17 +152,28 @@ impl Config {
         let contents = serde_json::to_string_pretty(self)
             .map_err(|e| LinError::parse(format!("Failed to serialize config: {}", e)))?;
 
-        fs::write(&path, contents)?;
+        // Use atomic write: write to temp file in same directory, then rename
+        // This prevents corruption if the process is interrupted mid-write
+        let temp_dir = path.parent().unwrap_or_else(|| std::path::Path::new("."));
+        let mut temp_file = tempfile::NamedTempFile::new_in(temp_dir)?;
 
-        // Set file permissions to 600 (owner read/write only) on Unix systems
-        // This protects API tokens from being readable by other users
+        // Write contents to temp file
+        temp_file.write_all(contents.as_bytes())?;
+        temp_file.flush()?;
+
+        // Set permissions before persisting (Unix only)
         #[cfg(unix)]
         {
-            let metadata = fs::metadata(&path)?;
+            let metadata = temp_file.as_file().metadata()?;
             let mut permissions = metadata.permissions();
             permissions.set_mode(0o600);
-            fs::set_permissions(&path, permissions)?;
+            temp_file.as_file().set_permissions(permissions)?;
         }
+
+        // Atomically replace the old file with the new one
+        temp_file
+            .persist(&path)
+            .map_err(|e| std::io::Error::other(format!("Failed to persist config: {}", e)))?;
 
         Ok(())
     }
