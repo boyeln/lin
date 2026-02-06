@@ -8,7 +8,7 @@ use crate::error::LinError;
 use crate::models::{IssueUpdateResponse, IssuesResponse};
 use crate::output::{OutputFormat, output};
 
-use super::{IssueUpdateOptions, is_uuid, parse_identifier};
+use super::{IssueUpdateOptions, MilestoneAction, is_uuid, parse_identifier};
 
 /// Update an existing issue in Linear.
 ///
@@ -115,6 +115,21 @@ pub fn update_issue(
         input.insert("projectId".to_string(), serde_json::json!(project_id));
     }
 
+    // Handle milestone assignment or removal
+    if let Some(milestone_action) = options.project_milestone_id {
+        match milestone_action {
+            MilestoneAction::Set(milestone_id) => {
+                input.insert(
+                    "projectMilestoneId".to_string(),
+                    serde_json::json!(milestone_id),
+                );
+            }
+            MilestoneAction::Remove => {
+                input.insert("projectMilestoneId".to_string(), serde_json::Value::Null);
+            }
+        }
+    }
+
     let variables = serde_json::json!({
         "id": issue_id,
         "input": input
@@ -196,6 +211,7 @@ mod tests {
             estimate: None,
             label_ids: None,
             project_id: None,
+            project_milestone_id: None,
         };
 
         let result = update_issue(
@@ -415,6 +431,7 @@ mod tests {
             estimate: None,
             label_ids: None,
             project_id: None,
+            project_milestone_id: None,
         };
 
         let result = update_issue(
