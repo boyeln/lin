@@ -22,6 +22,7 @@ pub mod comment;
 pub mod cycle;
 pub mod issue;
 pub mod label;
+pub mod milestone;
 pub mod organization;
 pub mod project;
 pub mod search;
