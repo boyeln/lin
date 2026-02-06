@@ -463,13 +463,8 @@ enum WorkflowCommands {
 enum ProjectCommands {
     /// List all projects
     #[command(after_help = "EXAMPLES:\n  \
-    lin project list\n  \
-    lin project list --team ENG")]
-    List {
-        /// Filter by team key (optional), e.g. ENG
-        #[arg(long)]
-        team: Option<String>,
-    },
+    lin project list")]
+    List,
     /// Get details of a specific project
     #[command(after_help = "EXAMPLES:\n  \
     lin project get <project-id>")]
@@ -1275,8 +1270,8 @@ fn handle_project_command(
     format: OutputFormat,
 ) -> lin::Result<()> {
     match command {
-        ProjectCommands::List { team } => {
-            let options = project::ProjectListOptions { team_key: team };
+        ProjectCommands::List => {
+            let options = project::ProjectListOptions::default();
             project::list_projects(&client, options, format)
         }
         ProjectCommands::Get { id } => project::get_project(&client, &id, format),

@@ -12,8 +12,7 @@ use crate::output::{OutputFormat, output};
 /// Options for listing projects.
 #[derive(Debug, Clone, Default)]
 pub struct ProjectListOptions {
-    /// Filter by team key (optional), e.g. "ENG".
-    pub team_key: Option<String>,
+    // No filters - projects are organization-wide
 }
 
 /// List all projects in the organization.
@@ -42,24 +41,10 @@ pub struct ProjectListOptions {
 /// ```
 pub fn list_projects(
     client: &GraphQLClient,
-    options: ProjectListOptions,
+    _options: ProjectListOptions,
     format: OutputFormat,
 ) -> Result<()> {
-    // Build variables
-    let mut variables = serde_json::Map::new();
-
-    // Build the filter object if we have a team filter
-    if let Some(team_key) = &options.team_key {
-        let filter = serde_json::json!({
-            "team": {
-                "key": { "eq": team_key }
-            }
-        });
-        variables.insert("filter".to_string(), filter);
-    }
-
-    let response: ProjectsResponse =
-        client.query(PROJECTS_QUERY, serde_json::Value::Object(variables))?;
+    let response: ProjectsResponse = client.query(PROJECTS_QUERY, serde_json::json!({}))?;
 
     // Cache project slugs (ignore errors if config not available)
     let projects_for_cache: Vec<(String, String)> = response
@@ -183,55 +168,6 @@ mod tests {
 
         // Make request
         let options = ProjectListOptions::default();
-        let result = list_projects(&client, options, OutputFormat::Human);
-
-        // Verify success
-        assert!(result.is_ok());
-
-        // Verify mock was called
-        mock.assert();
-    }
-
-    #[test]
-    fn test_list_projects_with_team_filter() {
-        // Start mock server
-        let mut server = mockito::Server::new();
-
-        // Set up mock response
-        let mock = server
-            .mock("POST", "/")
-            .with_status(200)
-            .with_header("content-type", "application/json")
-            .with_body(
-                r#"{
-                    "data": {
-                        "projects": {
-                            "nodes": [
-                                {
-                                    "id": "project-1",
-                                    "name": "Team Project",
-                                    "description": null,
-                                    "state": "started",
-                                    "createdAt": "2024-01-01T00:00:00.000Z",
-                                    "updatedAt": "2024-01-15T00:00:00.000Z",
-                                    "targetDate": null,
-                                    "startDate": null,
-                                    "progress": 50.0
-                                }
-                            ]
-                        }
-                    }
-                }"#,
-            )
-            .create();
-
-        // Create client pointing to mock server
-        let client = GraphQLClient::with_url("test-token", &server.url());
-
-        // Make request with team filter
-        let options = ProjectListOptions {
-            team_key: Some("ENG".to_string()),
-        };
         let result = list_projects(&client, options, OutputFormat::Human);
 
         // Verify success
