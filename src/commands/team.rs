@@ -179,13 +179,19 @@ mod tests {
                                     "id": "team-1",
                                     "key": "ENG",
                                     "name": "Engineering",
-                                    "description": "The engineering team"
+                                    "description": "The engineering team",
+                                    "issueEstimationType": {
+                                        "id": "tshirt",
+                                        "name": "T-Shirt Sizes",
+                                        "values": [1, 2, 3, 5, 8]
+                                    }
                                 },
                                 {
                                     "id": "team-2",
                                     "key": "DES",
                                     "name": "Design",
-                                    "description": null
+                                    "description": null,
+                                    "issueEstimationType": null
                                 }
                             ]
                         }
@@ -324,7 +330,12 @@ mod tests {
                             "id": "team-123",
                             "key": "ENG",
                             "name": "Engineering",
-                            "description": "The engineering team"
+                            "description": "The engineering team",
+                            "issueEstimationType": {
+                                "id": "fibonacci",
+                                "name": "Fibonacci",
+                                "values": [1, 2, 3, 5, 8, 13]
+                            }
                         }
                     }
                 }"#,
@@ -361,7 +372,8 @@ mod tests {
                             "id": "team-456",
                             "key": "DES",
                             "name": "Design",
-                            "description": null
+                            "description": null,
+                            "issueEstimationType": null
                         }
                     }
                 }"#,

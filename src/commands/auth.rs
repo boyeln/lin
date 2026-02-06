@@ -7,7 +7,7 @@ use crate::api::GraphQLClient;
 use crate::api::queries;
 use crate::config::{CachedTeam, Config};
 use crate::error::LinError;
-use crate::models::{TeamsResponse, ViewerResponse, WorkflowStatesResponse};
+use crate::models::{IssueEstimationType, TeamsResponse, ViewerResponse, WorkflowStatesResponse};
 use crate::output::{OutputFormat, output};
 use serde::Serialize;
 use std::collections::HashMap;
@@ -131,6 +131,46 @@ pub fn auth_sync(format: OutputFormat) -> Result<()> {
     Ok(())
 }
 
+/// Parse an estimate scale type into a HashMap of name -> value mappings.
+///
+/// For t-shirt scales, maps values [1,2,3,5,8] to ["xs","s","m","l","xl"].
+/// For numeric scales (linear, fibonacci, exponential), uses the numbers as names.
+/// Returns an empty HashMap for "none" or unknown types.
+fn parse_estimate_scale(estimate_type: &Option<IssueEstimationType>) -> HashMap<String, f64> {
+    let Some(est_type) = estimate_type else {
+        return HashMap::new();
+    };
+
+    match est_type.id.as_str() {
+        "tshirt" => {
+            // Map values [1,2,3,5,8] to ["xs","s","m","l","xl"]
+            let names = ["xs", "s", "m", "l", "xl"];
+            est_type
+                .values
+                .iter()
+                .take(names.len())
+                .enumerate()
+                .map(|(i, &val)| (names[i].to_string(), val))
+                .collect()
+        }
+        "linear" | "fibonacci" | "exponential" => {
+            // Numeric scales: use number as name
+            est_type
+                .values
+                .iter()
+                .map(|&val| {
+                    if val == val.floor() {
+                        (format!("{}", val as i64), val)
+                    } else {
+                        (format!("{}", val), val)
+                    }
+                })
+                .collect()
+        }
+        _ => HashMap::new(),
+    }
+}
+
 /// Sync all teams and their workflow states for the active organization.
 ///
 /// Returns a vector of (team_key, state_count) tuples.
@@ -167,7 +207,7 @@ fn sync_org_data(client: &GraphQLClient, config: &mut Config) -> Result<Vec<(Str
             id: team.id,
             name: team.name,
             states,
-            estimates: HashMap::new(),
+            estimates: parse_estimate_scale(&team.issue_estimate_type),
         };
 
         config.cache_team(team.key.clone(), cached_team)?;

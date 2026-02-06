@@ -11,7 +11,9 @@ use crate::api::queries;
 use crate::commands::issue::is_uuid;
 use crate::config::{CachedTeam, Config};
 use crate::error::LinError;
-use crate::models::{IssueTeamResponse, TeamsResponse, WorkflowStatesResponse};
+use crate::models::{
+    IssueEstimationType, IssueTeamResponse, TeamsResponse, WorkflowStatesResponse,
+};
 
 /// Resolve a team from an optional argument, falling back to the current team.
 ///
@@ -279,6 +281,46 @@ pub fn resolve_estimate_value(
     )))
 }
 
+/// Parse an estimate scale type into a HashMap of name -> value mappings.
+///
+/// For t-shirt scales, maps values [1,2,3,5,8] to ["xs","s","m","l","xl"].
+/// For numeric scales (linear, fibonacci, exponential), uses the numbers as names.
+/// Returns an empty HashMap for "none" or unknown types.
+fn parse_estimate_scale(estimate_type: &Option<IssueEstimationType>) -> HashMap<String, f64> {
+    let Some(est_type) = estimate_type else {
+        return HashMap::new();
+    };
+
+    match est_type.id.as_str() {
+        "tshirt" => {
+            // Map values [1,2,3,5,8] to ["xs","s","m","l","xl"]
+            let names = ["xs", "s", "m", "l", "xl"];
+            est_type
+                .values
+                .iter()
+                .take(names.len())
+                .enumerate()
+                .map(|(i, &val)| (names[i].to_string(), val))
+                .collect()
+        }
+        "linear" | "fibonacci" | "exponential" => {
+            // Numeric scales: use number as name
+            est_type
+                .values
+                .iter()
+                .map(|&val| {
+                    if val == val.floor() {
+                        (format!("{}", val as i64), val)
+                    } else {
+                        (format!("{}", val), val)
+                    }
+                })
+                .collect()
+        }
+        _ => HashMap::new(),
+    }
+}
+
 /// Sync a single team's data to the cache.
 ///
 /// Queries the team by key and all its workflow states, returning a CachedTeam.
@@ -312,7 +354,7 @@ fn sync_team_to_cache(client: &GraphQLClient, team_key: &str) -> Result<CachedTe
         id: team.id.clone(),
         name: team.name.clone(),
         states: state_map,
-        estimates: HashMap::new(),
+        estimates: parse_estimate_scale(&team.issue_estimate_type),
     })
 }
 
