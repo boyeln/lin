@@ -2,7 +2,7 @@
 //!
 //! Entry point for the CLI application.
 
-use clap::{CommandFactory, Parser, Subcommand};
+use clap::{CommandFactory, FromArgMatches, Parser, Subcommand};
 use clap_complete::Shell;
 use lin::api::GraphQLClient;
 use lin::auth;
@@ -160,7 +160,7 @@ enum IssueCommands {
         /// Filter by state name or UUID (e.g., "In Progress", "Done")
         #[arg(long)]
         state: Option<String>,
-        /// Filter by project ID
+        /// Filter by project slug or UUID (see 'lin project list')
         #[arg(long)]
         project: Option<String>,
         /// Filter by cycle ID
@@ -235,7 +235,7 @@ enum IssueCommands {
         /// Label IDs to add to the issue (can be specified multiple times)
         #[arg(long)]
         labels: Option<Vec<String>>,
-        /// Project ID to assign the issue to (optional)
+        /// Project slug or UUID (see 'lin project list')
         #[arg(long)]
         project: Option<String>,
     },
@@ -269,7 +269,7 @@ enum IssueCommands {
         /// Label IDs to set on the issue (replaces existing labels, can be specified multiple times)
         #[arg(long)]
         labels: Option<Vec<String>>,
-        /// Project ID to assign the issue to (optional)
+        /// Project slug or UUID (see 'lin project list')
         #[arg(long)]
         project: Option<String>,
     },
@@ -562,7 +562,11 @@ enum AuthCommands {
 }
 
 fn main() {
-    let cli = Cli::parse();
+    let mut cmd = Cli::command();
+    cmd = enrich_help_with_cached_data(cmd);
+    let matches = cmd.get_matches();
+    let cli = Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
+
     let format = OutputFormat::from_json_flag(cli.json);
 
     // Initialize color support (respects NO_COLOR env and TTY detection)
@@ -571,6 +575,110 @@ fn main() {
     if let Err(err) = run(cli, format) {
         output_error_with_format(&err, format);
     }
+}
+
+/// Convert a lowercase string to title case (capitalize first letter of each word).
+fn title_case(s: &str) -> String {
+    s.split_whitespace()
+        .map(|word| {
+            let mut chars = word.chars();
+            match chars.next() {
+                None => String::new(),
+                Some(c) => format!("{}{}", c.to_uppercase(), chars.as_str()),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Enrich CLI help text with cached team data (states, estimates).
+///
+/// When a current team is configured and its data is cached, this modifies
+/// the help text for `--state`, `--estimate`, and related options to show
+/// the actual valid choices for the team.
+///
+/// This is a best-effort operation — if config loading or cache access fails,
+/// the original command is returned unchanged.
+fn enrich_help_with_cached_data(cmd: clap::Command) -> clap::Command {
+    let config = match Config::load() {
+        Ok(c) => c,
+        Err(_) => return cmd,
+    };
+
+    let current_team = match config.get_current_team() {
+        Some(t) => t,
+        None => return cmd,
+    };
+
+    let org = match config.get_active_org() {
+        Ok(o) => o,
+        Err(_) => return cmd,
+    };
+
+    let cached_team = match org.cache.teams.get(&current_team) {
+        Some(t) => t,
+        None => return cmd,
+    };
+
+    // Build state choices string
+    let state_suffix = if !cached_team.states.is_empty() {
+        let mut states: Vec<String> = cached_team.states.keys().map(|s| title_case(s)).collect();
+        states.sort();
+        format!(" [{}: {}]", current_team, states.join(", "))
+    } else {
+        String::new()
+    };
+
+    // Build estimate choices string
+    let estimate_suffix = if !cached_team.estimates.is_empty() {
+        let mut estimates: Vec<(String, f64)> = cached_team
+            .estimates
+            .iter()
+            .map(|(k, v)| (k.to_uppercase(), *v))
+            .collect();
+        estimates.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+        let choices: Vec<String> = estimates
+            .iter()
+            .map(|(name, val)| {
+                if *val == val.floor() {
+                    format!("{} ({})", name, *val as i64)
+                } else {
+                    format!("{} ({})", name, val)
+                }
+            })
+            .collect();
+        format!(" [{}: {}]", current_team, choices.join(", "))
+    } else {
+        String::new()
+    };
+
+    // Build help strings for different contexts
+    let state_help_filter = format!("Filter by state name or UUID{}", state_suffix);
+    let state_help_set = format!("State name or UUID{}", state_suffix);
+    let estimate_help = format!("Estimate value{}", estimate_suffix);
+
+    let sfh = state_help_filter.clone();
+    let shs1 = state_help_set.clone();
+    let shs2 = state_help_set.clone();
+    let eh1 = estimate_help.clone();
+    let eh2 = estimate_help.clone();
+
+    // Modify help text in the command tree
+    cmd.mut_subcommand("issue", |issue_cmd| {
+        issue_cmd
+            .mut_subcommand("list", |c| c.mut_arg("state", |a| a.help(sfh.clone())))
+            .mut_subcommand("create", |c| {
+                c.mut_arg("state", |a| a.help(shs1.clone()))
+                    .mut_arg("estimate", |a| a.help(eh1.clone()))
+            })
+            .mut_subcommand("update", |c| {
+                c.mut_arg("state", |a| a.help(shs2.clone()))
+                    .mut_arg("estimate", |a| a.help(eh2.clone()))
+            })
+    })
+    .mut_subcommand("search", |c| {
+        c.mut_arg("state", |a| a.help(state_help_filter.clone()))
+    })
 }
 
 fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
