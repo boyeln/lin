@@ -11,11 +11,14 @@ curl -fsSL https://raw.githubusercontent.com/boyeln/lin/main/install.sh | bash
 # Authenticate (get your token from Linear Settings → API)
 lin auth work lin_api_xxx
 
+# Set default team (optional - saves typing --team on every command)
+lin team switch ENG
+
 # List your issues
-lin issue list --team ENG --assignee me
+lin issue list --assignee me
 
 # Create an issue
-lin issue create --team ENG --title "Fix bug" --state "todo" --priority high
+lin issue create --title "Fix bug" --state "todo" --priority high
 
 # Update an issue
 lin issue update ENG-123 --state "in progress"
