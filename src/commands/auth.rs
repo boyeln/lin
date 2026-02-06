@@ -29,7 +29,17 @@ pub fn auth_add(name: String, token: String, format: OutputFormat) -> Result<()>
     // 3. Sync all teams and their workflow states
     let teams = sync_org_data(&client, &mut config)?;
 
-    // 4. Output success
+    // 4. Auto-set current team to first team if available
+    let current_team = if !teams.is_empty() {
+        let first_team_key = teams[0].0.clone();
+        config.set_current_team(&first_team_key)?;
+        config.save()?;
+        Some(first_team_key)
+    } else {
+        None
+    };
+
+    // 5. Output success
     let team_keys: Vec<String> = teams.iter().map(|t| t.0.clone()).collect();
     let state_count: usize = teams.iter().map(|t| t.1).sum();
 
@@ -38,6 +48,7 @@ pub fn auth_add(name: String, token: String, format: OutputFormat) -> Result<()>
         teams: team_keys.clone(),
         team_count: team_keys.len(),
         state_count,
+        current_team,
     };
 
     output(&response, format);
@@ -203,17 +214,26 @@ struct AuthAddResponse {
     teams: Vec<String>,
     team_count: usize,
     state_count: usize,
+    current_team: Option<String>,
 }
 
 impl crate::output::HumanDisplay for AuthAddResponse {
     fn human_fmt(&self) -> String {
-        format!(
-            "✓ Authenticated as '{}'\n✓ Synced {} teams: {}\n✓ Cached {} workflow states",
-            self.organization,
-            self.team_count,
-            self.teams.join(", "),
-            self.state_count
-        )
+        let mut lines = vec![
+            format!("✓ Authenticated as '{}'", self.organization),
+            format!(
+                "✓ Synced {} teams: {}",
+                self.team_count,
+                self.teams.join(", ")
+            ),
+            format!("✓ Cached {} workflow states", self.state_count),
+        ];
+
+        if let Some(team) = &self.current_team {
+            lines.push(format!("✓ Current team: {}", team));
+        }
+
+        lines.join("\n")
     }
 }
 
@@ -325,6 +345,7 @@ mod tests {
             teams: vec!["ENG".to_string(), "DESIGN".to_string()],
             team_count: 2,
             state_count: 10,
+            current_team: Some("ENG".to_string()),
         };
 
         let output = response.human_fmt();
@@ -332,6 +353,7 @@ mod tests {
         assert!(output.contains("2 teams"));
         assert!(output.contains("ENG, DESIGN"));
         assert!(output.contains("10 workflow states"));
+        assert!(output.contains("Current team: ENG"));
     }
 
     #[test]
