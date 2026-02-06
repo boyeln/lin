@@ -40,6 +40,7 @@ use super::IssueCreateOptions;
 ///     estimate: None,
 ///     label_ids: None,
 ///     project_id: None,
+///     project_milestone_id: None,
 /// };
 /// create_issue(&client, options, OutputFormat::Human)?;
 /// # Ok(())
@@ -86,6 +87,13 @@ pub fn create_issue(
             .and_then(|config| config.get_project_id(&project_slug_or_id))
             .unwrap_or(project_slug_or_id);
         input.insert("projectId".to_string(), serde_json::json!(project_id));
+    }
+
+    if let Some(milestone_id) = options.project_milestone_id {
+        input.insert(
+            "projectMilestoneId".to_string(),
+            serde_json::json!(milestone_id),
+        );
     }
 
     let variables = serde_json::json!({
@@ -164,6 +172,7 @@ mod tests {
             estimate: None,
             label_ids: None,
             project_id: None,
+            project_milestone_id: None,
         };
 
         let result = create_issue(&client, options, OutputFormat::Human);
@@ -231,6 +240,7 @@ mod tests {
             estimate: None,
             label_ids: None,
             project_id: None,
+            project_milestone_id: None,
         };
 
         let result = create_issue(&client, options, OutputFormat::Human);
@@ -269,6 +279,7 @@ mod tests {
             estimate: None,
             label_ids: None,
             project_id: None,
+            project_milestone_id: None,
         };
 
         let result = create_issue(&client, options, OutputFormat::Human);
@@ -309,6 +320,7 @@ mod tests {
             estimate: None,
             label_ids: None,
             project_id: None,
+            project_milestone_id: None,
         };
 
         let result = create_issue(&client, options, OutputFormat::Human);
