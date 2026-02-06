@@ -99,13 +99,13 @@ enum Commands {
     Search {
         /// The search query string
         query: String,
-        /// Filter by team identifier (e.g., "ENG")
+        /// Filter by team key or UUID (e.g., "ENG")
         #[arg(long)]
         team: Option<String>,
         /// Filter by assignee (user ID or "me" for current user)
         #[arg(long)]
         assignee: Option<String>,
-        /// Filter by state name (e.g., "In Progress", "Done")
+        /// Filter by state name or UUID (e.g., "In Progress", "Done")
         #[arg(long)]
         state: Option<String>,
         /// Maximum number of results to return
@@ -151,13 +151,13 @@ enum IssueCommands {
     lin issue list --sort updated --order desc\n  \
     lin issue list --team ENG --assignee me --priority high")]
     List {
-        /// Filter by team identifier
+        /// Filter by team key or UUID (e.g., "ENG")
         #[arg(long)]
         team: Option<String>,
         /// Filter by assignee
         #[arg(long)]
         assignee: Option<String>,
-        /// Filter by state (e.g., "In Progress", "Done")
+        /// Filter by state name or UUID (e.g., "In Progress", "Done")
         #[arg(long)]
         state: Option<String>,
         /// Filter by project ID
@@ -214,16 +214,16 @@ enum IssueCommands {
         /// Issue title
         #[arg(long)]
         title: String,
-        /// Team ID (UUID of the team)
+        /// Team key or UUID (e.g., "ENG"). Uses current team if not specified.
         #[arg(long)]
-        team: String,
+        team: Option<String>,
         /// Issue description (optional)
         #[arg(long)]
         description: Option<String>,
         /// Assignee user ID (optional)
         #[arg(long)]
         assignee: Option<String>,
-        /// Initial state ID (optional)
+        /// State name or UUID (e.g., "Todo")
         #[arg(long)]
         state: Option<String>,
         /// Priority (0-4: 0=none, 1=urgent, 2=high, 3=normal, 4=low)
@@ -257,7 +257,7 @@ enum IssueCommands {
         /// Assignee user ID
         #[arg(long)]
         assignee: Option<String>,
-        /// New state ID
+        /// State name or UUID (e.g., "In Progress")
         #[arg(long)]
         state: Option<String>,
         /// New priority (0-4: 0=none, 1=urgent, 2=high, 3=normal, 4=low)
@@ -419,6 +419,14 @@ enum TeamCommands {
         /// Team identifier or key
         identifier: String,
     },
+    /// Switch current team or show current team
+    #[command(after_help = "EXAMPLES:\n  \
+    lin team switch ENG\n  \
+    lin team switch")]
+    Switch {
+        /// Team key to switch to (if not provided, shows current team)
+        team: Option<String>,
+    },
 }
 
 /// Workflow state-related subcommands.
@@ -427,11 +435,12 @@ enum WorkflowCommands {
     /// List workflow states for a team
     #[command(after_help = "EXAMPLES:\n  \
     lin workflow list --team <team-id>\n  \
-    lin workflow list --team ENG")]
+    lin workflow list --team ENG\n  \
+    lin workflow list")]
     List {
-        /// Team ID (UUID) or team key (e.g., "ENG")
+        /// Team key or UUID (e.g., "ENG"). Uses current team if not specified.
         #[arg(long)]
-        team: String,
+        team: Option<String>,
     },
 }
 
@@ -464,7 +473,7 @@ enum CycleCommands {
     lin cycle list --team <team-id>\n  \
     lin cycle list --team ENG")]
     List {
-        /// Team ID (UUID) or team key (e.g., "ENG")
+        /// Team key or UUID (e.g., "ENG")
         #[arg(long)]
         team: String,
     },
@@ -680,6 +689,14 @@ fn handle_issue_command(
             sort,
             order,
         } => {
+            // Resolve team if provided or use current team
+            let resolved_team = if team.is_some() {
+                team.clone()
+            } else {
+                // Try to get current team, but it's optional for list
+                let config = Config::load()?;
+                config.get_current_team()
+            };
             // If assignee is "me", we need to fetch the viewer ID first
             let viewer_id = if assignee.as_deref() == Some("me") {
                 let response: lin::models::ViewerResponse = client.query(
@@ -731,7 +748,7 @@ fn handle_issue_command(
             };
 
             let options = issue::IssueListOptions {
-                team,
+                team: resolved_team,
                 assignee,
                 state,
                 project,
@@ -763,14 +780,22 @@ fn handle_issue_command(
             labels,
             project,
         } => {
-            // Resolve team key to team ID
-            let team_id = resolvers::resolve_team_id(&client, &team, use_cache)?;
+            // Resolve team key to team ID (using current team if not specified)
+            let team_id = resolvers::resolve_team_or_current(&client, team.as_deref(), use_cache)?;
+
+            // Get the actual team key for state/estimate resolution
+            let team_key = if let Some(ref t) = team {
+                t.clone()
+            } else {
+                // We need the team key for state/estimate resolution
+                resolvers::get_team_key(&client, &team_id)?
+            };
 
             // Resolve state name to state ID if provided
             let state_id = if let Some(state_name) = state {
                 Some(resolvers::resolve_state_id(
                     &client,
-                    &team,
+                    &team_key,
                     &state_name,
                     use_cache,
                 )?)
@@ -782,7 +807,7 @@ fn handle_issue_command(
             let estimate_value = if let Some(est) = estimate {
                 Some(resolvers::resolve_estimate_value(
                     &est,
-                    Some(&team),
+                    Some(&team_key),
                     use_cache,
                 )?)
             } else {
@@ -958,6 +983,7 @@ fn handle_team_command(
     match command {
         TeamCommands::List => team::list_teams(&client, format),
         TeamCommands::Get { identifier } => team::get_team(&client, &identifier, format),
+        TeamCommands::Switch { team } => team::switch_team(team, format),
     }
 }
 
@@ -980,8 +1006,8 @@ fn handle_workflow_command(
 ) -> lin::Result<()> {
     match command {
         WorkflowCommands::List { team } => {
-            // Resolve team key to team ID
-            let team_id = resolvers::resolve_team_id(&client, &team, use_cache)?;
+            // Resolve team key to team ID (using current team if not specified)
+            let team_id = resolvers::resolve_team_or_current(&client, team.as_deref(), use_cache)?;
             workflow::list_workflow_states(&client, &team_id, format)
         }
     }
@@ -1046,8 +1072,17 @@ fn handle_search_command(
         None
     };
 
+    // Resolve team if provided or use current team
+    let resolved_team = if team.is_some() {
+        team.clone()
+    } else {
+        // Try to get current team, but it's optional for search
+        let config = Config::load()?;
+        config.get_current_team()
+    };
+
     let options = search::SearchOptions {
-        team,
+        team: resolved_team,
         assignee,
         state,
         limit: Some(limit as i32),
