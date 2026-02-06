@@ -14,29 +14,16 @@ impl HumanDisplay for Team {
             .unwrap_or_default();
 
         // Add estimate scale info if present
-        let estimates = if let Some(est_type) = &self.issue_estimate_type {
-            if !est_type.values.is_empty() {
-                let scale_display = match est_type.id.as_str() {
-                    "tshirt" => "XS, S, M, L, XL".to_string(),
-                    _ => est_type
-                        .values
-                        .iter()
-                        .map(|v| {
-                            if *v == v.floor() {
-                                format!("{}", *v as i64)
-                            } else {
-                                format!("{}", v)
-                            }
-                        })
-                        .collect::<Vec<_>>()
-                        .join(", "),
-                };
-                format!("\n  Estimates: {}", scale_display.dimmed())
-            } else {
-                String::new()
+        let estimates = match self.issue_estimate_type.as_deref() {
+            Some("tShirt") => format!("\n  Estimates: {}", "XS, S, M, L, XL".dimmed()),
+            Some("linear") => format!("\n  Estimates: {}", "1, 2, 3, 4, 5".dimmed()),
+            Some("fibonacci") => {
+                format!("\n  Estimates: {}", "1, 2, 3, 5, 8, 13, 21".dimmed())
             }
-        } else {
-            String::new()
+            Some("exponential") => {
+                format!("\n  Estimates: {}", "1, 2, 4, 8, 16, 32, 64".dimmed())
+            }
+            _ => String::new(),
         };
 
         format!(
@@ -87,18 +74,12 @@ mod tests {
 
     #[test]
     fn test_team_human_display_with_estimates() {
-        use crate::models::IssueEstimationType;
-
         let team = Team {
             id: "team-456".to_string(),
             key: "ENG".to_string(),
             name: "Engineering".to_string(),
             description: Some("The engineering team".to_string()),
-            issue_estimate_type: Some(IssueEstimationType {
-                id: "tshirt".to_string(),
-                name: "T-Shirt Sizes".to_string(),
-                values: vec![1.0, 2.0, 3.0, 5.0, 8.0],
-            }),
+            issue_estimate_type: Some("tShirt".to_string()),
         };
         let output = team.human_fmt();
         assert!(output.contains("[ENG]"));
