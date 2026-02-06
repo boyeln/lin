@@ -7,6 +7,7 @@ mod attachment;
 mod cycle;
 mod issue;
 mod label;
+mod milestone;
 mod project;
 mod team;
 mod user;
