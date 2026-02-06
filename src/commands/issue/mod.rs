@@ -140,6 +140,8 @@ pub struct IssueListOptions {
     pub cycle: Option<String>,
     /// Filter by label ID.
     pub label: Option<String>,
+    /// Filter by milestone name or UUID.
+    pub milestone: Option<String>,
     /// Filter by priority level.
     pub priority: Option<PriorityFilter>,
     /// Maximum number of issues to return (default 50).
@@ -179,6 +181,8 @@ pub struct IssueCreateOptions {
     pub label_ids: Option<Vec<String>>,
     /// Project ID to assign the issue to.
     pub project_id: Option<String>,
+    /// Project milestone ID to assign the issue to.
+    pub project_milestone_id: Option<String>,
 }
 
 /// Options for updating an existing issue.
@@ -200,6 +204,17 @@ pub struct IssueUpdateOptions {
     pub label_ids: Option<Vec<String>>,
     /// Project ID to assign the issue to.
     pub project_id: Option<String>,
+    /// Project milestone ID to assign the issue to (or MilestoneAction for removal).
+    pub project_milestone_id: Option<MilestoneAction>,
+}
+
+/// Action for milestone assignment (to handle removal with empty string).
+#[derive(Debug, Clone)]
+pub enum MilestoneAction {
+    /// Set to a specific milestone ID.
+    Set(String),
+    /// Remove milestone assignment (null).
+    Remove,
 }
 
 /// Check if a string looks like a UUID.
