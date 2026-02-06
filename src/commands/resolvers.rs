@@ -13,6 +13,41 @@ use crate::config::{CachedTeam, Config};
 use crate::error::LinError;
 use crate::models::{IssueTeamResponse, TeamsResponse, WorkflowStatesResponse};
 
+/// Resolve a team from an optional argument, falling back to the current team.
+///
+/// If `team_key_or_id` is provided, resolves it normally.
+/// If `team_key_or_id` is None, falls back to the current team from config.
+///
+/// # Arguments
+///
+/// * `client` - GraphQL client for API queries
+/// * `team_key_or_id` - Optional team key (e.g., "ENG") or UUID
+/// * `use_cache` - Whether to use cached data
+///
+/// # Returns
+///
+/// The team UUID.
+pub fn resolve_team_or_current(
+    client: &GraphQLClient,
+    team_key_or_id: Option<&str>,
+    use_cache: bool,
+) -> Result<String> {
+    if let Some(team) = team_key_or_id {
+        // Team was provided explicitly, resolve it
+        resolve_team_id(client, team, use_cache)
+    } else {
+        // No team provided, try to use current team
+        let config = Config::load()?;
+        match config.get_current_team() {
+            Some(current_team) => resolve_team_id(client, &current_team, use_cache),
+            None => Err(LinError::config(
+                "No team specified. Use --team or set a default team with 'lin team switch <key>'"
+                    .to_string(),
+            )),
+        }
+    }
+}
+
 /// Resolve a team key or UUID to a team UUID.
 ///
 /// If `use_cache` is true, uses cached data from the config.
