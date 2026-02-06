@@ -30,6 +30,9 @@ pub struct OrgConfig {
     /// Cached data for this organization
     #[serde(default)]
     pub cache: OrgCache,
+    /// Current/default team key for this organization
+    #[serde(default)]
+    pub current_team: Option<String>,
 }
 
 /// Cached data for an organization.
@@ -120,6 +123,7 @@ impl Config {
         let org_config = OrgConfig {
             token,
             cache: OrgCache::default(),
+            current_team: None,
         };
 
         self.orgs.insert(name.clone(), org_config);
@@ -345,6 +349,44 @@ impl Config {
     /// List all configured organization names.
     pub fn list_orgs(&self) -> Vec<&str> {
         self.orgs.keys().map(|s| s.as_str()).collect()
+    }
+
+    /// Set the current team for the active organization.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if no active organization is set or the team is not in the cache.
+    pub fn set_current_team(&mut self, team_key: &str) -> Result<()> {
+        let org = self.get_active_org_mut()?;
+
+        // Verify team exists in cache
+        if !org.cache.teams.contains_key(team_key) {
+            return Err(LinError::config(format!(
+                "Team '{}' not found in cache. Run 'lin auth sync' to sync teams.",
+                team_key
+            )));
+        }
+
+        org.current_team = Some(team_key.to_string());
+        Ok(())
+    }
+
+    /// Get the current team for the active organization.
+    ///
+    /// Returns None if no current team is set.
+    pub fn get_current_team(&self) -> Option<String> {
+        self.get_active_org().ok()?.current_team.clone()
+    }
+
+    /// Clear the current team for the active organization.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if no active organization is set.
+    pub fn clear_current_team(&mut self) -> Result<()> {
+        let org = self.get_active_org_mut()?;
+        org.current_team = None;
+        Ok(())
     }
 
     /// Slugify a project name for use as a human-readable identifier.
