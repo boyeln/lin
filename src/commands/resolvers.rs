@@ -11,9 +11,7 @@ use crate::api::queries;
 use crate::commands::issue::is_uuid;
 use crate::config::{CachedTeam, Config};
 use crate::error::LinError;
-use crate::models::{
-    IssueEstimationType, IssueTeamResponse, TeamsResponse, WorkflowStatesResponse,
-};
+use crate::models::{IssueTeamResponse, TeamsResponse, WorkflowStatesResponse};
 
 /// Resolve a team from an optional argument, falling back to the current team.
 ///
@@ -281,42 +279,38 @@ pub fn resolve_estimate_value(
     )))
 }
 
-/// Parse an estimate scale type into a HashMap of name -> value mappings.
+/// Parse an estimate scale type string into a HashMap of name -> value mappings.
 ///
-/// For t-shirt scales, maps values [1,2,3,5,8] to ["xs","s","m","l","xl"].
-/// For numeric scales (linear, fibonacci, exponential), uses the numbers as names.
-/// Returns an empty HashMap for "none" or unknown types.
-fn parse_estimate_scale(estimate_type: &Option<IssueEstimationType>) -> HashMap<String, f64> {
+/// For t-shirt scales, maps ["xs","s","m","l","xl"] to [1,2,3,5,8].
+/// For numeric scales (linear, fibonacci, exponential), uses hardcoded default values.
+/// Returns an empty HashMap for "notUsed" or unknown types.
+fn parse_estimate_scale(estimate_type: &Option<String>) -> HashMap<String, f64> {
     let Some(est_type) = estimate_type else {
         return HashMap::new();
     };
 
-    match est_type.id.as_str() {
-        "tshirt" => {
-            // Map values [1,2,3,5,8] to ["xs","s","m","l","xl"]
+    match est_type.as_str() {
+        "tShirt" => {
             let names = ["xs", "s", "m", "l", "xl"];
-            est_type
-                .values
+            let values = [1.0, 2.0, 3.0, 5.0, 8.0];
+            names
                 .iter()
-                .take(names.len())
-                .enumerate()
-                .map(|(i, &val)| (names[i].to_string(), val))
+                .zip(values.iter())
+                .map(|(&name, &val)| (name.to_string(), val))
                 .collect()
         }
-        "linear" | "fibonacci" | "exponential" => {
-            // Numeric scales: use number as name
-            est_type
-                .values
-                .iter()
-                .map(|&val| {
-                    if val == val.floor() {
-                        (format!("{}", val as i64), val)
-                    } else {
-                        (format!("{}", val), val)
-                    }
-                })
-                .collect()
-        }
+        "linear" => [1.0, 2.0, 3.0, 4.0, 5.0]
+            .iter()
+            .map(|&val| (format!("{}", val as i64), val))
+            .collect(),
+        "fibonacci" => [1.0, 2.0, 3.0, 5.0, 8.0, 13.0, 21.0]
+            .iter()
+            .map(|&val| (format!("{}", val as i64), val))
+            .collect(),
+        "exponential" => [1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0]
+            .iter()
+            .map(|&val| (format!("{}", val as i64), val))
+            .collect(),
         _ => HashMap::new(),
     }
 }

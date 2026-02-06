@@ -14,11 +14,7 @@ query Teams($first: Int) {
             key
             name
             description
-            issueEstimationType {
-                id
-                name
-                values
-            }
+            issueEstimationType
         }
     }
 }
@@ -37,11 +33,7 @@ query TeamByKey($filter: TeamFilter!) {
             id
             key
             name
-            issueEstimationType {
-                id
-                name
-                values
-            }
+            issueEstimationType
         }
     }
 }
@@ -60,11 +52,7 @@ query Team($id: String!) {
         key
         name
         description
-        issueEstimationType {
-            id
-            name
-            values
-        }
+        issueEstimationType
     }
 }
 "#;

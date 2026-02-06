@@ -7,7 +7,7 @@ use crate::api::GraphQLClient;
 use crate::api::queries;
 use crate::config::{CachedTeam, Config};
 use crate::error::LinError;
-use crate::models::{IssueEstimationType, TeamsResponse, ViewerResponse, WorkflowStatesResponse};
+use crate::models::{TeamsResponse, ViewerResponse, WorkflowStatesResponse};
 use crate::output::{OutputFormat, output};
 use serde::Serialize;
 use std::collections::HashMap;
@@ -131,42 +131,38 @@ pub fn auth_sync(format: OutputFormat) -> Result<()> {
     Ok(())
 }
 
-/// Parse an estimate scale type into a HashMap of name -> value mappings.
+/// Parse an estimate scale type string into a HashMap of name -> value mappings.
 ///
-/// For t-shirt scales, maps values [1,2,3,5,8] to ["xs","s","m","l","xl"].
-/// For numeric scales (linear, fibonacci, exponential), uses the numbers as names.
-/// Returns an empty HashMap for "none" or unknown types.
-fn parse_estimate_scale(estimate_type: &Option<IssueEstimationType>) -> HashMap<String, f64> {
+/// For t-shirt scales, maps ["xs","s","m","l","xl"] to [1,2,3,5,8].
+/// For numeric scales (linear, fibonacci, exponential), uses hardcoded default values.
+/// Returns an empty HashMap for "notUsed" or unknown types.
+fn parse_estimate_scale(estimate_type: &Option<String>) -> HashMap<String, f64> {
     let Some(est_type) = estimate_type else {
         return HashMap::new();
     };
 
-    match est_type.id.as_str() {
-        "tshirt" => {
-            // Map values [1,2,3,5,8] to ["xs","s","m","l","xl"]
+    match est_type.as_str() {
+        "tShirt" => {
             let names = ["xs", "s", "m", "l", "xl"];
-            est_type
-                .values
+            let values = [1.0, 2.0, 3.0, 5.0, 8.0];
+            names
                 .iter()
-                .take(names.len())
-                .enumerate()
-                .map(|(i, &val)| (names[i].to_string(), val))
+                .zip(values.iter())
+                .map(|(&name, &val)| (name.to_string(), val))
                 .collect()
         }
-        "linear" | "fibonacci" | "exponential" => {
-            // Numeric scales: use number as name
-            est_type
-                .values
-                .iter()
-                .map(|&val| {
-                    if val == val.floor() {
-                        (format!("{}", val as i64), val)
-                    } else {
-                        (format!("{}", val), val)
-                    }
-                })
-                .collect()
-        }
+        "linear" => [1.0, 2.0, 3.0, 4.0, 5.0]
+            .iter()
+            .map(|&val| (format!("{}", val as i64), val))
+            .collect(),
+        "fibonacci" => [1.0, 2.0, 3.0, 5.0, 8.0, 13.0, 21.0]
+            .iter()
+            .map(|&val| (format!("{}", val as i64), val))
+            .collect(),
+        "exponential" => [1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0]
+            .iter()
+            .map(|&val| (format!("{}", val as i64), val))
+            .collect(),
         _ => HashMap::new(),
     }
 }
@@ -411,5 +407,71 @@ mod tests {
         assert!(output.contains("  org2"));
         assert!(output.contains("3 teams"));
         assert!(output.contains("5 teams"));
+    }
+
+    #[test]
+    fn test_parse_estimate_scale_tshirt() {
+        let est = Some("tShirt".to_string());
+        let scale = parse_estimate_scale(&est);
+        assert_eq!(scale.len(), 5);
+        assert_eq!(scale["xs"], 1.0);
+        assert_eq!(scale["s"], 2.0);
+        assert_eq!(scale["m"], 3.0);
+        assert_eq!(scale["l"], 5.0);
+        assert_eq!(scale["xl"], 8.0);
+    }
+
+    #[test]
+    fn test_parse_estimate_scale_linear() {
+        let est = Some("linear".to_string());
+        let scale = parse_estimate_scale(&est);
+        assert_eq!(scale.len(), 5);
+        assert_eq!(scale["1"], 1.0);
+        assert_eq!(scale["2"], 2.0);
+        assert_eq!(scale["3"], 3.0);
+        assert_eq!(scale["4"], 4.0);
+        assert_eq!(scale["5"], 5.0);
+    }
+
+    #[test]
+    fn test_parse_estimate_scale_fibonacci() {
+        let est = Some("fibonacci".to_string());
+        let scale = parse_estimate_scale(&est);
+        assert_eq!(scale.len(), 7);
+        assert_eq!(scale["1"], 1.0);
+        assert_eq!(scale["2"], 2.0);
+        assert_eq!(scale["3"], 3.0);
+        assert_eq!(scale["5"], 5.0);
+        assert_eq!(scale["8"], 8.0);
+        assert_eq!(scale["13"], 13.0);
+        assert_eq!(scale["21"], 21.0);
+    }
+
+    #[test]
+    fn test_parse_estimate_scale_exponential() {
+        let est = Some("exponential".to_string());
+        let scale = parse_estimate_scale(&est);
+        assert_eq!(scale.len(), 7);
+        assert_eq!(scale["1"], 1.0);
+        assert_eq!(scale["2"], 2.0);
+        assert_eq!(scale["4"], 4.0);
+        assert_eq!(scale["8"], 8.0);
+        assert_eq!(scale["16"], 16.0);
+        assert_eq!(scale["32"], 32.0);
+        assert_eq!(scale["64"], 64.0);
+    }
+
+    #[test]
+    fn test_parse_estimate_scale_not_used() {
+        let est = Some("notUsed".to_string());
+        let scale = parse_estimate_scale(&est);
+        assert!(scale.is_empty());
+    }
+
+    #[test]
+    fn test_parse_estimate_scale_none() {
+        let est: Option<String> = None;
+        let scale = parse_estimate_scale(&est);
+        assert!(scale.is_empty());
     }
 }

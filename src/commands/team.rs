@@ -180,18 +180,14 @@ mod tests {
                                     "key": "ENG",
                                     "name": "Engineering",
                                     "description": "The engineering team",
-                                    "issueEstimationType": {
-                                        "id": "tshirt",
-                                        "name": "T-Shirt Sizes",
-                                        "values": [1, 2, 3, 5, 8]
-                                    }
+                                    "issueEstimationType": "tShirt"
                                 },
                                 {
                                     "id": "team-2",
                                     "key": "DES",
                                     "name": "Design",
                                     "description": null,
-                                    "issueEstimationType": null
+                                    "issueEstimationType": "notUsed"
                                 }
                             ]
                         }
@@ -331,11 +327,7 @@ mod tests {
                             "key": "ENG",
                             "name": "Engineering",
                             "description": "The engineering team",
-                            "issueEstimationType": {
-                                "id": "fibonacci",
-                                "name": "Fibonacci",
-                                "values": [1, 2, 3, 5, 8, 13]
-                            }
+                            "issueEstimationType": "fibonacci"
                         }
                     }
                 }"#,
@@ -373,7 +365,7 @@ mod tests {
                             "key": "DES",
                             "name": "Design",
                             "description": null,
-                            "issueEstimationType": null
+                            "issueEstimationType": "notUsed"
                         }
                     }
                 }"#,
@@ -491,6 +483,89 @@ mod tests {
         assert!(err.to_string().contains("HTTP 500"));
 
         // Verify mock was called
+        mock.assert();
+    }
+
+    #[test]
+    fn test_list_teams_with_scalar_estimate_types() {
+        // Verify that issueEstimationType as a scalar string is deserialized correctly.
+        // This is a regression test for the GraphQL field selection bug where
+        // issueEstimationType was queried with subfields (id, name, values) but
+        // the Linear API now returns it as a plain string.
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "teams": {
+                            "nodes": [
+                                {
+                                    "id": "team-1",
+                                    "key": "ENG",
+                                    "name": "Engineering",
+                                    "description": "The engineering team",
+                                    "issueEstimationType": "fibonacci"
+                                },
+                                {
+                                    "id": "team-2",
+                                    "key": "DES",
+                                    "name": "Design",
+                                    "description": null,
+                                    "issueEstimationType": "tShirt"
+                                },
+                                {
+                                    "id": "team-3",
+                                    "key": "OPS",
+                                    "name": "Operations",
+                                    "description": null,
+                                    "issueEstimationType": "notUsed"
+                                }
+                            ]
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let result = list_teams(&client, OutputFormat::Human);
+        assert!(result.is_ok());
+
+        mock.assert();
+    }
+
+    #[test]
+    fn test_get_team_with_scalar_estimate_type() {
+        // Verify single team query works with scalar issueEstimationType
+        let mut server = mockito::Server::new();
+
+        let mock = server
+            .mock("POST", "/")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                    "data": {
+                        "team": {
+                            "id": "team-123",
+                            "key": "ENG",
+                            "name": "Engineering",
+                            "description": "The engineering team",
+                            "issueEstimationType": "exponential"
+                        }
+                    }
+                }"#,
+            )
+            .create();
+
+        let client = GraphQLClient::with_url("test-token", &server.url());
+        let result = get_team(&client, "team-123", OutputFormat::Human);
+        assert!(result.is_ok());
+
         mock.assert();
     }
 }
