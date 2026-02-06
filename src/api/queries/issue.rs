@@ -40,6 +40,12 @@ query Issues($first: Int, $filter: IssueFilter, $orderBy: PaginationOrderBy) {
                 displayName
                 active
             }
+            projectMilestone {
+                id
+                name
+                targetDate
+                status
+            }
         }
     }
 }
@@ -80,6 +86,12 @@ query Issue($id: String!) {
             email
             displayName
             active
+        }
+        projectMilestone {
+            id
+            name
+            targetDate
+            status
         }
     }
 }
@@ -124,6 +136,12 @@ query IssueByIdentifier($filter: IssueFilter!) {
                 email
                 displayName
                 active
+            }
+            projectMilestone {
+                id
+                name
+                targetDate
+                status
             }
         }
     }
