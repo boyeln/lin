@@ -11,6 +11,7 @@ pub mod cycle;
 pub mod git;
 pub mod issue;
 pub mod label;
+pub mod milestone;
 pub mod project;
 pub mod relation;
 pub mod resolvers;

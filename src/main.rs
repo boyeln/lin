@@ -7,8 +7,8 @@ use clap_complete::Shell;
 use lin::api::GraphQLClient;
 use lin::auth;
 use lin::commands::{
-    attachment, comment, completions, cycle, git, issue, label, project, relation, resolvers,
-    search, self_update, team, user, workflow,
+    attachment, comment, completions, cycle, git, issue, label, milestone, project, relation,
+    resolvers, search, self_update, team, user, workflow,
 };
 use lin::config::Config;
 use lin::error::LinError;
@@ -91,6 +91,11 @@ enum Commands {
         #[command(subcommand)]
         command: LabelCommands,
     },
+    /// Manage project milestones
+    Milestone {
+        #[command(subcommand)]
+        command: MilestoneCommands,
+    },
     /// Search for issues
     #[command(after_help = "EXAMPLES:\n  \
     lin search \"authentication bug\"\n  \
@@ -169,6 +174,9 @@ enum IssueCommands {
         /// Filter by label ID
         #[arg(long)]
         label: Option<String>,
+        /// Filter by milestone name or UUID (requires --project if name)
+        #[arg(long)]
+        milestone: Option<String>,
         /// Filter by priority (0-4 or: none, urgent, high, normal, low)
         #[arg(long)]
         priority: Option<String>,
@@ -238,6 +246,9 @@ enum IssueCommands {
         /// Project slug or UUID (see 'lin project list')
         #[arg(long)]
         project: Option<String>,
+        /// Milestone name or UUID (requires --project if name)
+        #[arg(long)]
+        milestone: Option<String>,
     },
     /// Update an existing issue
     #[command(after_help = "EXAMPLES:\n  \
@@ -272,6 +283,9 @@ enum IssueCommands {
         /// Project slug or UUID (see 'lin project list')
         #[arg(long)]
         project: Option<String>,
+        /// Milestone name or UUID (requires --project if name). Use empty string to remove.
+        #[arg(long)]
+        milestone: Option<String>,
     },
     /// Delete an issue
     #[command(after_help = "EXAMPLES:\n  \
@@ -507,6 +521,75 @@ enum LabelCommands {
     },
 }
 
+/// Project milestone-related subcommands.
+#[derive(Subcommand, Debug)]
+enum MilestoneCommands {
+    /// List milestones for a project
+    #[command(after_help = "EXAMPLES:\n  \
+    lin milestone list --project <project-id>\n  \
+    lin milestone list --project roadmap")]
+    List {
+        /// Project slug or UUID
+        #[arg(long)]
+        project: String,
+    },
+    /// Get details of a specific milestone
+    #[command(after_help = "EXAMPLES:\n  \
+    lin milestone get <milestone-id>")]
+    Get {
+        /// Milestone ID
+        id: String,
+    },
+    /// Create a new milestone
+    #[command(after_help = "EXAMPLES:\n  \
+    lin milestone create --project roadmap --name \"Sprint 1\"\n  \
+    lin milestone create --project <id> --name \"Q1\" --description \"First quarter\" --target-date 2024-03-31")]
+    Create {
+        /// Project slug or UUID
+        #[arg(long)]
+        project: String,
+        /// Milestone name
+        #[arg(long)]
+        name: String,
+        /// Milestone description (optional)
+        #[arg(long)]
+        description: Option<String>,
+        /// Target date in YYYY-MM-DD format (optional)
+        #[arg(long)]
+        target_date: Option<String>,
+        /// Sort order (optional)
+        #[arg(long)]
+        sort_order: Option<f64>,
+    },
+    /// Update an existing milestone
+    #[command(after_help = "EXAMPLES:\n  \
+    lin milestone update <milestone-id> --name \"New Name\"\n  \
+    lin milestone update <milestone-id> --target-date 2024-06-30")]
+    Update {
+        /// Milestone ID
+        id: String,
+        /// New milestone name (optional)
+        #[arg(long)]
+        name: Option<String>,
+        /// New milestone description (optional)
+        #[arg(long)]
+        description: Option<String>,
+        /// New target date in YYYY-MM-DD format (optional)
+        #[arg(long)]
+        target_date: Option<String>,
+        /// New sort order (optional)
+        #[arg(long)]
+        sort_order: Option<f64>,
+    },
+    /// Delete a milestone
+    #[command(after_help = "EXAMPLES:\n  \
+    lin milestone delete <milestone-id>")]
+    Delete {
+        /// Milestone ID
+        id: String,
+    },
+}
+
 /// User-related subcommands.
 #[derive(Subcommand, Debug)]
 enum UserCommands {
@@ -719,6 +802,9 @@ fn run(cli: Cli, format: OutputFormat) -> lin::Result<()> {
                 Commands::Project { command } => handle_project_command(command, client, format),
                 Commands::Cycle { command } => handle_cycle_command(command, client, format),
                 Commands::Label { command } => handle_label_command(command, client, format),
+                Commands::Milestone { command } => {
+                    handle_milestone_command(command, client, format)
+                }
                 Commands::Search {
                     query,
                     team,
@@ -788,6 +874,7 @@ fn handle_issue_command(
             project,
             cycle,
             label,
+            milestone,
             priority,
             limit,
             created_after,
@@ -862,6 +949,7 @@ fn handle_issue_command(
                 project,
                 cycle,
                 label,
+                milestone,
                 priority: priority_filter,
                 limit: Some(limit as i32),
                 created_after,
@@ -887,6 +975,7 @@ fn handle_issue_command(
             estimate,
             labels,
             project,
+            milestone,
         } => {
             // Resolve team key to team ID (using current team if not specified)
             let team_id = resolvers::resolve_team_or_current(&client, team.as_deref(), use_cache)?;
@@ -922,6 +1011,32 @@ fn handle_issue_command(
                 None
             };
 
+            // Resolve milestone name to ID if provided
+            let milestone_id = if let Some(ms) = milestone {
+                if issue::is_uuid(&ms) {
+                    // UUID - use directly
+                    Some(ms)
+                } else {
+                    // Name - need to resolve to ID using project
+                    let project_slug_or_id = project.as_ref().ok_or_else(|| {
+                        lin::error::LinError::config(
+                            "Project required when assigning milestone by name. Use --project <id> or provide milestone UUID.".to_string()
+                        )
+                    })?;
+
+                    // Resolve project slug to ID if needed
+                    let project_id = Config::load()
+                        .ok()
+                        .and_then(|config| config.get_project_id(project_slug_or_id))
+                        .unwrap_or_else(|| project_slug_or_id.clone());
+
+                    // Resolve milestone name to ID
+                    Some(resolvers::resolve_milestone_id(&client, &ms, &project_id)?)
+                }
+            } else {
+                None
+            };
+
             let options = issue::IssueCreateOptions {
                 title,
                 team_id,
@@ -932,6 +1047,7 @@ fn handle_issue_command(
                 estimate: estimate_value,
                 label_ids: labels,
                 project_id: project,
+                project_milestone_id: milestone_id,
             };
             issue::create::create_issue(&client, options, format)
         }
@@ -945,6 +1061,7 @@ fn handle_issue_command(
             estimate,
             labels,
             project,
+            milestone,
         } => {
             // We may need team context for state or estimate resolution
             let team_key_opt = if state.is_some() || estimate.is_some() {
@@ -1004,6 +1121,36 @@ fn handle_issue_command(
                 None
             };
 
+            // Handle milestone assignment or removal
+            let milestone_action = if let Some(ms) = milestone {
+                if ms.is_empty() {
+                    // Empty string = remove milestone
+                    Some(issue::MilestoneAction::Remove)
+                } else if issue::is_uuid(&ms) {
+                    // UUID - use directly
+                    Some(issue::MilestoneAction::Set(ms))
+                } else {
+                    // Name - need to resolve to ID using project
+                    let project_slug_or_id = project.as_ref().ok_or_else(|| {
+                        LinError::config(
+                            "Project required when assigning milestone by name. Use --project <id> or provide milestone UUID.".to_string()
+                        )
+                    })?;
+
+                    // Resolve project slug to ID if needed
+                    let project_id = Config::load()
+                        .ok()
+                        .and_then(|config| config.get_project_id(project_slug_or_id))
+                        .unwrap_or_else(|| project_slug_or_id.clone());
+
+                    // Resolve milestone name to ID
+                    let milestone_id = resolvers::resolve_milestone_id(&client, &ms, &project_id)?;
+                    Some(issue::MilestoneAction::Set(milestone_id))
+                }
+            } else {
+                None
+            };
+
             let options = issue::IssueUpdateOptions {
                 title,
                 description,
@@ -1013,6 +1160,7 @@ fn handle_issue_command(
                 estimate: estimate_value,
                 label_ids: labels,
                 project_id: project,
+                project_milestone_id: milestone_action,
             };
             issue::update::update_issue(&client, &identifier, options, format)
         }
@@ -1157,6 +1305,52 @@ fn handle_label_command(
             label::list_labels(&client, options, format)
         }
         LabelCommands::Get { id } => label::get_label(&client, &id, format),
+    }
+}
+
+fn handle_milestone_command(
+    command: MilestoneCommands,
+    client: GraphQLClient,
+    format: OutputFormat,
+) -> lin::Result<()> {
+    match command {
+        MilestoneCommands::List { project } => {
+            milestone::list_milestones(&client, &project, format)
+        }
+        MilestoneCommands::Get { id } => milestone::get_milestone(&client, &id, format),
+        MilestoneCommands::Create {
+            project,
+            name,
+            description,
+            target_date,
+            sort_order,
+        } => {
+            let options = milestone::MilestoneCreateOptions {
+                project,
+                name,
+                description,
+                target_date,
+                sort_order,
+            };
+            milestone::create_milestone(&client, options, format)
+        }
+        MilestoneCommands::Update {
+            id,
+            name,
+            description,
+            target_date,
+            sort_order,
+        } => {
+            let options = milestone::MilestoneUpdateOptions {
+                id,
+                name,
+                description,
+                target_date,
+                sort_order,
+            };
+            milestone::update_milestone(&client, options, format)
+        }
+        MilestoneCommands::Delete { id } => milestone::delete_milestone(&client, &id),
     }
 }
 
