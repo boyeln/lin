@@ -5,8 +5,10 @@
 use crate::Result;
 use crate::api::GraphQLClient;
 use crate::api::queries::team::{TEAM_QUERY, TEAMS_QUERY};
+use crate::config::Config;
 use crate::models::{TeamResponse, TeamsResponse};
 use crate::output::{OutputFormat, output};
+use serde::Serialize;
 
 /// List all teams in the organization.
 ///
@@ -66,6 +68,89 @@ pub fn get_team(client: &GraphQLClient, id: &str, format: OutputFormat) -> Resul
     let response: TeamResponse = client.query(TEAM_QUERY, variables)?;
     output(&response.team, format);
     Ok(())
+}
+
+/// Switch the current team or show the current team.
+///
+/// If a team key is provided, switches to that team.
+/// If no team key is provided, shows the current team.
+///
+/// # Arguments
+///
+/// * `team_key` - Optional team key to switch to
+/// * `format` - The output format (Human or Json)
+///
+/// # Example
+///
+/// ```no_run
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// use lin::commands::team::switch_team;
+/// use lin::output::OutputFormat;
+///
+/// // Switch to ENG team
+/// switch_team(Some("ENG".to_string()), OutputFormat::Human)?;
+///
+/// // Show current team
+/// switch_team(None, OutputFormat::Human)?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn switch_team(team_key: Option<String>, format: OutputFormat) -> Result<()> {
+    let mut config = Config::load()?;
+
+    if let Some(team) = team_key {
+        // Switch to the specified team
+        config.set_current_team(&team)?;
+        config.save()?;
+
+        let response = TeamSwitchResponse { team: team.clone() };
+        output(&response, format);
+    } else {
+        // Show current team
+        match config.get_current_team() {
+            Some(team) => {
+                let response = CurrentTeamResponse {
+                    current_team: Some(team),
+                };
+                output(&response, format);
+            }
+            None => {
+                let response = CurrentTeamResponse { current_team: None };
+                output(&response, format);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+// Response types for JSON output
+
+#[derive(Debug, Serialize)]
+struct TeamSwitchResponse {
+    team: String,
+}
+
+impl crate::output::HumanDisplay for TeamSwitchResponse {
+    fn human_fmt(&self) -> String {
+        format!("✓ Switched to team '{}'", self.team)
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct CurrentTeamResponse {
+    current_team: Option<String>,
+}
+
+impl crate::output::HumanDisplay for CurrentTeamResponse {
+    fn human_fmt(&self) -> String {
+        match &self.current_team {
+            Some(team) => format!("Current team: {}", team),
+            None => {
+                "No team selected. Use 'lin team switch <key>' to set a default team.".to_string()
+            }
+        }
+    }
 }
 
 #[cfg(test)]
