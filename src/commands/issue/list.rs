@@ -3,12 +3,13 @@
 use crate::Result;
 use crate::api::GraphQLClient;
 use crate::api::queries::issue::ISSUES_QUERY;
+use crate::commands::resolvers;
 use crate::config::Config;
 use crate::error::LinError;
 use crate::models::IssuesResponse;
 use crate::output::{OutputFormat, output};
 
-use super::IssueListOptions;
+use super::{IssueListOptions, is_uuid};
 
 /// List issues with optional filters.
 ///
@@ -111,6 +112,36 @@ pub fn list_issues(
         filter.insert(
             "labels".to_string(),
             serde_json::json!({ "id": { "eq": label_id } }),
+        );
+    }
+
+    // Add milestone filter if specified
+    if let Some(milestone) = &options.milestone {
+        let milestone_id = if is_uuid(milestone) {
+            // UUID - use directly
+            milestone.clone()
+        } else {
+            // Name - need to resolve to ID
+            // Requires project to be specified
+            let project_slug_or_id = options.project.as_ref().ok_or_else(|| {
+                LinError::config(
+                    "Project required when filtering by milestone name. Use --project <id> or provide milestone UUID.".to_string()
+                )
+            })?;
+
+            // Resolve project slug to ID if needed
+            let project_id = Config::load()
+                .ok()
+                .and_then(|config| config.get_project_id(project_slug_or_id))
+                .unwrap_or_else(|| project_slug_or_id.clone());
+
+            // Resolve milestone name to ID
+            resolvers::resolve_milestone_id(client, milestone, &project_id)?
+        };
+
+        filter.insert(
+            "projectMilestone".to_string(),
+            serde_json::json!({ "id": { "eq": milestone_id } }),
         );
     }
 
@@ -1108,6 +1139,7 @@ mod tests {
             project: Some("project-456".to_string()),
             cycle: Some("cycle-789".to_string()),
             label: Some("label-abc".to_string()),
+            milestone: None,
             priority: Some(PriorityFilter::Urgent),
             limit: Some(25),
             created_after: Some("2024-01-01".to_string()),
