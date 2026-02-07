@@ -32,6 +32,7 @@ query Issues($first: Int, $filter: IssueFilter, $orderBy: PaginationOrderBy) {
                 key
                 name
                 description
+                issueEstimationType
             }
             assignee {
                 id
@@ -79,6 +80,7 @@ query Issue($id: String!) {
             key
             name
             description
+            issueEstimationType
         }
         assignee {
             id
@@ -129,6 +131,7 @@ query IssueByIdentifier($filter: IssueFilter!) {
                 key
                 name
                 description
+                issueEstimationType
             }
             assignee {
                 id
@@ -186,6 +189,7 @@ mutation IssueCreate($input: IssueCreateInput!) {
                 key
                 name
                 description
+                issueEstimationType
             }
             assignee {
                 id
@@ -237,6 +241,7 @@ mutation IssueUpdate($id: String!, $input: IssueUpdateInput!) {
                 key
                 name
                 description
+                issueEstimationType
             }
             assignee {
                 id
@@ -320,6 +325,7 @@ query IssueWithComments($id: String!) {
             key
             name
             description
+            issueEstimationType
         }
         assignee {
             id
@@ -376,6 +382,7 @@ query IssueByIdentifierWithComments($filter: IssueFilter!) {
                 key
                 name
                 description
+                issueEstimationType
             }
             assignee {
                 id
