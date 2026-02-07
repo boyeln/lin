@@ -5,6 +5,36 @@ use colored::Colorize;
 use super::HumanDisplay;
 use crate::models::{Comment, FullIssueRelation, Issue, IssueWithComments, NormalizedRelation};
 
+/// Format an estimate value using the team's estimate scale name.
+///
+/// For t-shirt scales, converts the numeric value back to its name (e.g., 5.0 → "L (5)").
+/// For numeric scales (linear, fibonacci, exponential), the name matches the number so
+/// only the number is shown.
+fn format_estimate(value: f64, estimate_type: Option<&str>) -> String {
+    let num_str = if value.fract() == 0.0 {
+        format!("{}", value as i64)
+    } else {
+        format!("{}", value)
+    };
+
+    let name = match estimate_type {
+        Some("tShirt") => match value as i64 {
+            1 => Some("XS"),
+            2 => Some("S"),
+            3 => Some("M"),
+            5 => Some("L"),
+            8 => Some("XL"),
+            _ => None,
+        },
+        _ => None,
+    };
+
+    match name {
+        Some(n) => format!("{} ({})", n, num_str),
+        None => num_str,
+    }
+}
+
 impl HumanDisplay for Issue {
     fn human_fmt(&self) -> String {
         let identifier = self.identifier.bold().cyan();
@@ -36,7 +66,12 @@ impl HumanDisplay for Issue {
         }
 
         if let Some(estimate) = self.estimate {
-            parts.push(format!("  {}: {}", "Estimate".dimmed(), estimate));
+            let estimate_type = self
+                .team
+                .as_ref()
+                .and_then(|t| t.issue_estimate_type.as_deref());
+            let formatted = format_estimate(estimate, estimate_type);
+            parts.push(format!("  {}: {}", "Estimate".dimmed(), formatted));
         }
 
         if let Some(assignee) = &self.assignee {
@@ -118,7 +153,12 @@ impl HumanDisplay for IssueWithComments {
         }
 
         if let Some(estimate) = self.estimate {
-            parts.push(format!("  {}: {}", "Estimate".dimmed(), estimate));
+            let estimate_type = self
+                .team
+                .as_ref()
+                .and_then(|t| t.issue_estimate_type.as_deref());
+            let formatted = format_estimate(estimate, estimate_type);
+            parts.push(format!("  {}: {}", "Estimate".dimmed(), formatted));
         }
 
         if let Some(assignee) = &self.assignee {
@@ -271,6 +311,59 @@ mod tests {
         assert!(output.contains("Parent"));
         assert!(output.contains("ENG-100"));
         assert!(output.contains("Parent issue"));
+    }
+
+    #[test]
+    fn test_format_estimate_tshirt() {
+        assert_eq!(format_estimate(1.0, Some("tShirt")), "XS (1)");
+        assert_eq!(format_estimate(2.0, Some("tShirt")), "S (2)");
+        assert_eq!(format_estimate(3.0, Some("tShirt")), "M (3)");
+        assert_eq!(format_estimate(5.0, Some("tShirt")), "L (5)");
+        assert_eq!(format_estimate(8.0, Some("tShirt")), "XL (8)");
+    }
+
+    #[test]
+    fn test_format_estimate_tshirt_unknown_value() {
+        assert_eq!(format_estimate(4.0, Some("tShirt")), "4");
+    }
+
+    #[test]
+    fn test_format_estimate_numeric_scales() {
+        assert_eq!(format_estimate(5.0, Some("fibonacci")), "5");
+        assert_eq!(format_estimate(3.0, Some("linear")), "3");
+        assert_eq!(format_estimate(8.0, Some("exponential")), "8");
+    }
+
+    #[test]
+    fn test_format_estimate_no_type() {
+        assert_eq!(format_estimate(5.0, None), "5");
+        assert_eq!(format_estimate(3.5, None), "3.5");
+    }
+
+    #[test]
+    fn test_issue_human_display_with_tshirt_estimate() {
+        let issue = Issue {
+            id: "issue-123".to_string(),
+            identifier: "ENG-123".to_string(),
+            title: "Fix the bug".to_string(),
+            description: None,
+            priority: 2,
+            estimate: Some(5.0),
+            state: None,
+            team: Some(crate::models::Team {
+                id: "team-1".to_string(),
+                key: "ENG".to_string(),
+                name: "Engineering".to_string(),
+                description: None,
+                issue_estimate_type: Some("tShirt".to_string()),
+            }),
+            assignee: None,
+            project_milestone: None,
+            created_at: "2024-01-01".to_string(),
+            updated_at: "2024-01-02".to_string(),
+        };
+        let output = issue.human_fmt();
+        assert!(output.contains("Estimate: L (5)"));
     }
 
     #[test]
