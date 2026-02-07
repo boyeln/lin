@@ -210,6 +210,22 @@ fn sync_org_data(client: &GraphQLClient, config: &mut Config) -> Result<Vec<(Str
         results.push((team.key, state_count));
     }
 
+    // Query and cache all projects
+    use crate::models::ProjectsResponse;
+    let projects_response: ProjectsResponse = client.query(
+        queries::project::PROJECTS_QUERY,
+        serde_json::json!({ "first": 250 }),
+    )?;
+
+    let projects: Vec<(String, String)> = projects_response
+        .projects
+        .nodes
+        .into_iter()
+        .map(|p| (p.id, p.name))
+        .collect();
+
+    config.cache_projects(projects)?;
+
     // Update last sync time
     config.update_last_sync()?;
     config.save()?;
