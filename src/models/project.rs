@@ -15,6 +15,8 @@ pub struct Project {
     pub name: String,
     /// Optional description of the project.
     pub description: Option<String>,
+    /// Optional rich-text content of the project.
+    pub content: Option<String>,
     /// The project's state (planned, started, paused, completed, canceled).
     pub state: String,
     /// ISO 8601 timestamp of when the project was created.
@@ -63,6 +65,7 @@ mod tests {
             "id": "project-123",
             "name": "Q1 Roadmap",
             "description": "Quarterly roadmap project",
+            "content": "Full project content here",
             "state": "started",
             "createdAt": "2024-01-01T00:00:00.000Z",
             "updatedAt": "2024-01-15T00:00:00.000Z",
@@ -89,6 +92,7 @@ mod tests {
             "id": "project-456",
             "name": "Simple Project",
             "description": null,
+            "content": null,
             "state": "planned",
             "createdAt": "2024-01-01T00:00:00.000Z",
             "updatedAt": "2024-01-01T00:00:00.000Z",
@@ -111,6 +115,7 @@ mod tests {
                         "id": "project-1",
                         "name": "Project Alpha",
                         "description": null,
+                        "content": null,
                         "state": "started",
                         "createdAt": "2024-01-01T00:00:00.000Z",
                         "updatedAt": "2024-01-15T00:00:00.000Z",

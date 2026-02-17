@@ -14,6 +14,7 @@ query Projects($first: Int, $filter: ProjectFilter) {
             id
             name
             description
+            content
             state
             createdAt
             updatedAt
