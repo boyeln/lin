@@ -26,6 +26,10 @@ impl HumanDisplay for Project {
             parts.push(format!("  {}: {}", "Description".dimmed(), desc));
         }
 
+        if let Some(content) = &self.content {
+            parts.push(format!("  {}: {}", "Content".dimmed(), content));
+        }
+
         if let Some(start) = &self.start_date {
             parts.push(format!("  {}: {}", "Start".dimmed(), start));
         }
